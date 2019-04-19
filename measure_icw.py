@@ -11,6 +11,7 @@ from scapy.all import *
 # Global variables to match retransmissions
 cur_seqno = 0
 prev_seqno = 0
+ip_of_url = None
 # Global variable to set timeouts on transmissions
 t_out = 10
 
@@ -31,11 +32,13 @@ def update_stream(packet):
 	cur_seqno = packet.seq
 
 def stop_stream(packet):
-	global cur_seqno, prev_seqno
+	global cur_seqno, prev_seqno, ip_of_url
 	FIN = 0x01
 	F = packet['TCP'].flags
-
-	if( packet.seq< prev_seqno or (F & FIN) ):
+	
+	if( packet['IP'].src!=ip_of_url or 
+		( packet.seq< prev_seqno or (F & FIN) ) ):
+		# Response from a different source,
 		# Retransmission or FIN packet
 		return True
 	else:
@@ -53,7 +56,7 @@ def get_long_str():
 	return long_str
 
 def send_syn(url,rsport,mss):
-	global t_out
+	global t_out, ip_of_url
 	try:
 		syn = IP(dst=url)/TCP(sport=rsport, dport=80,flags='S',seq=1,
 				options=[('MSS',mss)])
@@ -63,6 +66,8 @@ def send_syn(url,rsport,mss):
 
 	ans, _ = sr(syn,timeout=t_out)
 	if(ans):
+		ip_of_url = ans[0][1].src
+		#print("** ",url," replied from: ",ip_of_url)
 		return ans[0][1]
 	else:
 		return None
@@ -82,9 +87,19 @@ def send_request(url,syn_ack):
 	packets = sniff(filter='tcp src port 80', prn=update_stream, 
 				timeout=t_out, stop_filter=stop_stream)
 	
-	return packets
+	return packets, get_rqst
+
+def send_rst(request):
+	global prev_seqno
+
+	rst = IP(dst=request['IP'].dst)/TCP(dport=80, sport=request.sport, 
+				seq=request.seq + len(request['TCP'].payload),
+				ack=prev_seqno + 1, flags='R')
+
+	send(rst)
 
 def get_icw(responses,mss):
+	global ip_of_url
 	seen_seqno = 0
 	icw = 0
 	FIN = 0x01
@@ -97,7 +112,10 @@ def get_icw(responses,mss):
 		if(pad):
 			segment_size -= len(pad)
 		
-		if (segment_size == 0 and not(F & FIN)):
+		if (pkt['IP'].src != ip_of_url):
+			# Server responds from different source(s)
+			continue
+		elif (segment_size == 0 and not(F & FIN)):
 			# Empty packet 
 			continue
 		elif ((segment_size != mss) or (F & FIN)):
@@ -115,10 +133,10 @@ def main():
 	url_list = readList(args.url_list)
 	pcap_file = 'reproduction.pcap'
 
-	mss = 100
+	mss = 48
 	
 	for url in url_list:
-		print(url)
+		print("*** ",url)
 		rsport = random.randrange(2048,65500)
 
 		syn_ack = send_syn(url,rsport,mss)
@@ -126,11 +144,12 @@ def main():
 		if(syn_ack):
 			if (syn_ack.sprintf("%TCP.flags%")=='SA'):
 			
-				responses = send_request(url,syn_ack)
+				responses, request = send_request(url,syn_ack)
 				icw = get_icw(responses,mss)
+				send_rst(request)
 
 				wrpcap(pcap_file,responses)
-				print("ICW for ",url,": ",icw)
+				print("** ICW for ",url,": ",icw)
 				
 		else:
 			print("-> Could not get a SYN-ACK response")
