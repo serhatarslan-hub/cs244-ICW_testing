@@ -8,7 +8,11 @@ from argparse import ArgumentParser
 import random
 from scapy.all import *
 
-seqno = 0
+# Global variables to match retransmissions
+cur_seqno = 0
+prev_seqno = 0
+# Global variable to set timeouts on transmissions
+t_out = 10
 
 def readList(filename):
 	
@@ -22,59 +26,114 @@ def readList(filename):
 	return url_list
 
 def update_stream(packet):
-	#print(packet.seq)
-	global seqno
-	seqno = packet.seq
+	global cur_seqno, prev_seqno
+	prev_seqno = cur_seqno
+	cur_seqno = packet.seq
 
 def stop_stream(packet):
-	global seqno
-	print("Packet seqno:",packet.seq," Global seqno:",seqno)
-	if( packet.seq< seqno ):
-		print("Returning True")
+	global cur_seqno, prev_seqno
+	FIN = 0x01
+	F = packet['TCP'].flags
+
+	if( packet.seq< prev_seqno or (F & FIN) ):
+		# Retransmission or FIN packet
 		return True
 	else:
-		print("Returning False")
 		return False
 
 def get_long_str():
+	'''
+	Generate a very long arbitrary string that increases the url length,
+	so that the response is large too.
+	'''
 	short_str = 'AAAAAaaaaaBBBBBbbbbbCCCCCcccccDDDDDdddddEEEEEeeeee'
 	long_str = short_str
 	for _ in range(26):
 		long_str = long_str + short_str
 	return long_str
 
+def send_syn(url,rsport,mss):
+	global t_out
+	try:
+		syn = IP(dst=url)/TCP(sport=rsport, dport=80,flags='S',seq=1,
+				options=[('MSS',mss)])
+	except:
+		print("-> Could not create the SYN packet")
+		return None
+
+	ans, _ = sr(syn,timeout=t_out)
+	if(ans):
+		return ans[0][1]
+	else:
+		return None
+
+def send_request(url,syn_ack):
+	global cur_seqno, prev_seqno, t_out
+	cur_seqno = 0
+	prev_seqno = 0
+	long_str = get_long_str()
+
+	getStr = 'GET /'+long_str+' HTTP/1.1\r\nHost: '
+	getStr += url+'\r\nConnection: Close\r\n\r\n'
+	get_rqst = IP(dst=syn_ack.src)/TCP(dport=80, sport=syn_ack.dport, 
+				seq=syn_ack.ack, ack=syn_ack.seq + 1, flags='A') / getStr
+
+	send(get_rqst)
+	packets = sniff(filter='tcp src port 80', prn=update_stream, 
+				timeout=t_out, stop_filter=stop_stream)
+	
+	return packets
+
+def get_icw(responses,mss):
+	seen_seqno = 0
+	icw = 0
+	FIN = 0x01
+	
+	for pkt in responses:
+		segment_size = len(pkt['TCP'].payload)
+		pad = pkt.getlayer(Padding)
+		F = pkt['TCP'].flags
+
+		if(pad):
+			segment_size -= len(pad)
+		
+		if (segment_size == 0 and not(F & FIN)):
+			# Empty packet 
+			continue
+		elif ((segment_size != mss) or (F & FIN)):
+			# Either not a full packet or a FIN packet
+			# ICW test fails
+			return 0
+		else:
+			if(seen_seqno < pkt.seq):
+				seen_seqno = pkt.seq
+				icw += 1	
+	return icw
+
 def main():
 
 	url_list = readList(args.url_list)
 	pcap_file = 'reproduction.pcap'
 
-	mss = 64
-	recv_wnd = 65500
-	long_str = get_long_str()
-
+	mss = 100
+	
 	for url in url_list:
 		print(url)
 		rsport = random.randrange(2048,65500)
 
-		syn = IP(dst=url)/TCP(sport=rsport, dport=80,flags='S',seq=1,
-			options=[('MSS',mss)])
-		ans, unans = sr(syn)
-		syn_ack = ans[0][1]	
-		if (syn_ack.sprintf("%TCP.flags%")=='SA'):
+		syn_ack = send_syn(url,rsport,mss)
+	
+		if(syn_ack):
+			if (syn_ack.sprintf("%TCP.flags%")=='SA'):
 			
-			getStr = 'GET /'+long_str+' HTTP/1.1\r\nHost: '+url+'\r\nConnection: Close\r\n\r\n'
-			get_rqst = IP(dst=syn_ack.src)/TCP(dport=80, sport=syn_ack.dport, 
-					seq=syn_ack.ack, ack=syn_ack.seq + 1, 
-					flags='A', window = recv_wnd) / getStr
-			#rep, unans = sr(get_rqst)
-			global seqno
-			seqno = 0
-			send(get_rqst)
-			packets = sniff(filter='tcp src port 80',
-					prn=update_stream, timeout=10,
-					stop_filter=stop_stream)
-			wrpcap(pcap_file,packets)
-			print(len(packets))
+				responses = send_request(url,syn_ack)
+				icw = get_icw(responses,mss)
+
+				wrpcap(pcap_file,responses)
+				print("ICW for ",url,": ",icw)
+				
+		else:
+			print("-> Could not get a SYN-ACK response")
 
 if __name__ == "__main__":
 
