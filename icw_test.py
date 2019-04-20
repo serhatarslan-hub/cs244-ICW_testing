@@ -72,12 +72,13 @@ class ICWTest(object):
         return long_str
 
     def send_syn(self, url, rsport,mss):
-        try:
-            syn = IP(dst=url)/TCP(sport=rsport, dport=80,flags='S',seq=1,
-                    options=[('MSS',mss)])
-        except:
-            print("-> Could not create the SYN packet")
-            return None
+        # TODO: wrap this again
+        # try:
+        syn = IP(dst=url)/TCP(sport=rsport, dport=80,flags='S',seq=1,
+                options=[('MSS',mss)])
+        # except:
+        #     print("-> Could not create the SYN packet")
+        #     return None
 
         ans, _ = sr(syn, timeout=self.ret_timeout)
         if(ans):
