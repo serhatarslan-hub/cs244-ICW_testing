@@ -121,7 +121,7 @@ class ICWTest(object):
         for pkt in responses:
             segment_size = len(pkt['TCP'].payload)
             pad = pkt.getlayer(Padding)
-            F = pkt['TCP'].flags
+            flags = pkt['TCP'].flags
 
             if(pad):
                 segment_size -= len(pad)
@@ -129,10 +129,10 @@ class ICWTest(object):
             if (pkt['IP'].src != self.ip_of_url):
                 # Server responds from different source(s)
                 continue
-            elif (segment_size == 0 and not(F & FIN)):
+            elif (segment_size == 0 and not(flags & FIN)):
                 # Empty packet 
                 continue
-            elif ((segment_size != mss) or (F & FIN)):
+            elif ((segment_size != mss) or (flags & FIN)):
                 # Either not a full packet or a FIN packet
                 # ICW test fails
                 return 0
