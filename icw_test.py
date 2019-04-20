@@ -44,6 +44,7 @@ class ICWTest(object):
 
             # Perform HTTP request and collect responses
             responses, request = self._send_request(self.url, syn_ack)
+            print("Received %d responses" % len(responses))
 
             # Compute ICW
             icw = self._get_icw(responses, mss)
@@ -109,6 +110,7 @@ class ICWTest(object):
         self.prev_seqno = 0
         long_str = self._get_long_str()
 
+        # Construct GET requestr
         get_str = 'GET /' + long_str + ' HTTP/1.1\r\nHost: ' \
                   + url + '\r\nConnection: Close\r\n\r\n'
         get_rqst = IP(dst=syn_ack.src) \
@@ -116,9 +118,11 @@ class ICWTest(object):
                          flags='A') \
                    / get_str
 
+        # Send request
         send(get_rqst)
-        # prn function takes effect and acts on the packet every step of the way
-        # stop_filter
+
+        # Listen for responses. The prn function takes acts on every packet and stop_filter aborts
+        # when we see a response from a different source, a retransmission, or a FIN packet.
         packets = sniff(filter='tcp src port 80', prn=self._update_stream,
                         timeout=self.ret_timeout, stop_filter=self._stop_stream)
 
@@ -140,6 +144,7 @@ class ICWTest(object):
 
         if packet['IP'].src != self.ip_of_url or packet.seq < self.prev_seqno or (
                 F & FIN):
+            # TODO: any raise here?
             # Response from a different source,
             # Retransmission or FIN packet
             return True
@@ -164,14 +169,14 @@ class ICWTest(object):
 
             if pkt['IP'].src != self.ip_of_url:
                 # Server responds from different source(s)
-                continue
+                raise ICWTestException(Result.DIFFERENT_SOURCE)
             elif segment_size == 0 and not (flags & FIN):
                 # Empty packet
                 continue
             elif segment_size != mss or (flags & FIN):
                 # Either not a full packet or a FIN packet
                 # ICW test fails
-                raise ICWTestException(FIN_PACKET)
+                raise ICWTestException(Result.FIN_PACKET)
             else:
                 if seen_seqno < pkt.seq:
                     seen_seqno = pkt.seq
@@ -185,6 +190,7 @@ class Result(object):
     BAD_ACK = "bad_ack"
     SYN_ACK_TIMEOUT = "ack_timeout"
     FIN_PACKET = "fin"
+    DIFFERENT_SOURCE = "different_source"
     SUCCESS = "success"
 
 
