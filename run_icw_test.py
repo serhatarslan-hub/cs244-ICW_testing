@@ -1,6 +1,6 @@
 #!/usr/bin/python
 from argparse import ArgumentParser
-from icw_test import ICWTest
+from icw_test import ICWTest, Result
 import random
 
 
@@ -23,15 +23,20 @@ def main():
     mss = 48
 
     for url in url_list:
-        print("*** %s" % url)
+        print("="*32)
+        print("Testing: %s" % url)
         # TODO: loop over ports insted
         # Start from 65k and go down
         rsport = random.randrange(2048, 65500)
 
         experiment = ICWTest(url=url)
-        experiment.run_test(mss=mss, pcap_output='reproduction.pcap',
-                            rsport=rsport)
-
+        result, icw = experiment.run_test(
+            mss=mss,pcap_output='reproduction.pcap', rsport=rsport)
+        print("*"*32)
+        if result == Result.SUCCESS:
+            print("==> Result: success!\nICW Estimate: %d" % icw)
+        else:
+            print("==> Result: error: %s" % result)
 
 if __name__ == "__main__":
     main()

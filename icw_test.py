@@ -29,6 +29,8 @@ class ICWTest(object):
             mss: the maximum segment size in bytes
             pcap_output: pcap output filename
             rsport: receiver port (don't run multiple tests on the same port simultaneously)
+
+        Returns tuple (result, icw), where icw will be None unless result is Result.SUCCESS.
         """
 
         try:
@@ -49,14 +51,13 @@ class ICWTest(object):
             # Close connection using a RST packet and write experiment output
             self._close_connection(request)
             wrpcap(pcap_output, responses)
-            print("** ICW for %s: %d" % (self.url, icw))
 
-            return Result.SUCCESS
+            return Result.SUCCESS, icw
 
         except ICWTestException as e:
             print("Test aborted: %s" % e.message)
             # Returns one of the Result options defined below
-            return e.message
+            return e.message, None
 
     def _open_connection(self, url, rsport, mss):
         """
@@ -169,7 +170,7 @@ class ICWTest(object):
             elif segment_size != mss or (flags & FIN):
                 # Either not a full packet or a FIN packet
                 # ICW test fails
-                return 0
+                raise ICWTestException(FIN_PACKET)
             else:
                 if seen_seqno < pkt.seq:
                     seen_seqno = pkt.seq
@@ -178,16 +179,11 @@ class ICWTest(object):
 
 
 class Result(object):
-    # User wrote bad host
-    MALFORMED_HOST = "malformed_host"
-
-    # DNS lookup error (old host?)
-    BAD_DNS = "dns"
-
+    MALFORMED_HOST = "malformed_host"  # User wrote bad host
+    BAD_DNS = "dns"  # DNS lookup error (old host?)
     BAD_ACK = "bad_ack"
-
     SYN_ACK_TIMEOUT = "ack_timeout"
-
+    FIN_PACKET = "fin"
     SUCCESS = "success"
 
 
