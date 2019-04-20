@@ -61,7 +61,6 @@ class ICWTest(object):
             return False
 
     # TODO: maybe try first the main page, then try this
-
     def get_long_str(self):
         '''
         Generate a very long arbitrary string that increases the url length,
@@ -83,7 +82,7 @@ class ICWTest(object):
         #     return None
 
         ans, _ = sr(syn, timeout=self.ret_timeout)
-        if(ans):
+        if ans:
             self.ip_of_url = ans[0][1].src
             #print("** ",url," replied from: ",self.ip_of_url)
             return ans[0][1]
@@ -127,21 +126,21 @@ class ICWTest(object):
             pad = pkt.getlayer(Padding)
             flags = pkt['TCP'].flags
 
-            if(pad):
+            if pad:
                 segment_size -= len(pad)
 
-            if (pkt['IP'].src != self.ip_of_url):
+            if pkt['IP'].src != self.ip_of_url:
                 # Server responds from different source(s)
                 continue
-            elif (segment_size == 0 and not(flags & FIN)):
+            elif segment_size == 0 and not (flags & FIN):
                 # Empty packet
                 continue
-            elif ((segment_size != mss) or (flags & FIN)):
+            elif segment_size != mss or (flags & FIN):
                 # Either not a full packet or a FIN packet
                 # ICW test fails
                 return 0
             else:
-                if(seen_seqno < pkt.seq):
+                if seen_seqno < pkt.seq:
                     seen_seqno = pkt.seq
                     icw += 1
         return icw
