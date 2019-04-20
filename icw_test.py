@@ -61,15 +61,11 @@ class ICWTest(object):
 
     # TODO: maybe try first the main page, then try this
     def _get_long_str(self):
-        '''
-        Generate a very long arbitrary string that increases the url length,
+        """
+        Generates a very long arbitrary string with the intent to increase the URL length,
         so that the response is large too.
-        '''
-        short_str = 'AAAAAaaaaaBBBBBbbbbbCCCCCcccccDDDDDdddddEEEEEeeeee'
-        long_str = short_str
-        for _ in range(26):
-            long_str = long_str + short_str
-        return long_str
+        """
+        return 'chicken'*32
 
     def _send_syn(self, url, rsport, mss):
         # TODO: wrap this again
