@@ -17,7 +17,6 @@ def main():
 
     url_list = read_url_list(args.url_list)
     print("Performing ICW test on %d URLs." % len(url_list))
-    pcap_file = 'reproduction.pcap'
 
     # Some linux servers will automatically make it 64 per min, but 48 is safe
     mss = 48
@@ -31,7 +30,7 @@ def main():
 
         experiment = ICWTest(url=url)
         result, icw = experiment.run_test(
-            mss=mss, pcap_output='reproduction.pcap', rsport=rsport)
+            mss=mss, rsport=rsport, pcap_output='debug.pcap')
         if result == Result.SUCCESS:
             print("==> Result: success!\n==> ICW Estimate: %d" % icw)
         else:

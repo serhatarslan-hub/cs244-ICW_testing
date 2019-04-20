@@ -21,14 +21,14 @@ class ICWTest(object):
         self.prev_seqno = 0
         self.ip_of_url = None
 
-    def run_test(self, mss, pcap_output, rsport):
+    def run_test(self, mss, rsport, pcap_output=None):
         """
         Performs the test on the specified URL.
 
         Args:
             mss: the maximum segment size in bytes
-            pcap_output: pcap output filename
             rsport: receiver port (don't run multiple tests on the same port simultaneously)
+            pcap_output: pcap output filename to write trace (if provided)
 
         Returns tuple (result, icw), where icw will be None unless result is Result.SUCCESS.
         """
@@ -50,7 +50,8 @@ class ICWTest(object):
 
             # Close connection using a RST packet and write experiment output
             self._close_connection(request)
-            wrpcap(pcap_output, responses)
+            if pcap_output is not None:
+                wrpcap(pcap_output, responses)
 
             return Result.SUCCESS, icw
 
