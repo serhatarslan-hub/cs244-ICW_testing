@@ -23,7 +23,7 @@ def main():
     mss = 48
 
     for url in url_list:
-        print("*** ", url)
+        print("*** %s" % url)
         # TODO: loop over ports insted
         # Start from 65k and go down
         rsport = random.randrange(2048, 65500)
