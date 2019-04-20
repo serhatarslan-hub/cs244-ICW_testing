@@ -1,4 +1,6 @@
-from scapy.all import *
+from scapy.all import send, sniff, sr, wrpcap  # send, receive, send/receive, and write pcap
+from scapy.all import IP, TCP  # header constructors
+from scapy.all import Padding  # packet layer
 
 class ICWTest(object):
     """
