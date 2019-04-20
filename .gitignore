@@ -1,0 +1,16 @@
+# Gunk
+.DS_Store
+*.pyc
+*~
+
+# Sublime
+sftp-config.json
+
+# Virtual env
+env/
+
+# PyCharm
+.idea/
+
+#.ipynb checkpoints
+**/*.ipynb_checkpoints

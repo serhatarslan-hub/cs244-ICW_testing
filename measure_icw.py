@@ -16,9 +16,7 @@ ip_of_url = None
 t_out = 10
 
 def readList(filename):
-	
 	url_list = []
-	
 	with open(filename) as f:
 		for line in f:
 			split_line = line.split()
@@ -44,6 +42,8 @@ def stop_stream(packet):
 	else:
 		return False
 
+
+# TODO: maybe try first the main page, then try this
 def get_long_str():
 	'''
 	Generate a very long arbitrary string that increases the url length,
@@ -64,7 +64,7 @@ def send_syn(url,rsport,mss):
 		print("-> Could not create the SYN packet")
 		return None
 
-	ans, _ = sr(syn,timeout=t_out)
+	ans, _ = sr(syn, timeout=t_out)
 	if(ans):
 		ip_of_url = ans[0][1].src
 		#print("** ",url," replied from: ",ip_of_url)
@@ -84,6 +84,8 @@ def send_request(url,syn_ack):
 				seq=syn_ack.ack, ack=syn_ack.seq + 1, flags='A') / getStr
 
 	send(get_rqst)
+	# prn function takes effect and acts on the packet every step of the way
+	# stop_filter
 	packets = sniff(filter='tcp src port 80', prn=update_stream, 
 				timeout=t_out, stop_filter=stop_stream)
 	
@@ -133,10 +135,13 @@ def main():
 	url_list = readList(args.url_list)
 	pcap_file = 'reproduction.pcap'
 
+	# Some linux servers will automatically make it 64 per min, but 48 is safe
 	mss = 48
 	
 	for url in url_list:
 		print("*** ",url)
+		# TODO: loop over them insted
+		# Start from 65k and go down
 		rsport = random.randrange(2048,65500)
 
 		syn_ack = send_syn(url,rsport,mss)
