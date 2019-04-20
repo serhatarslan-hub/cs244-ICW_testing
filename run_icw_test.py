@@ -27,7 +27,7 @@ def main():
     
     for url in url_list:
         print("*** ",url)
-        # TODO: loop over them insted
+        # TODO: loop over ports insted
         # Start from 65k and go down
         rsport = random.randrange(2048, 65500)
 
