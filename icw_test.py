@@ -95,13 +95,12 @@ class ICWTest(object):
         self.prev_seqno = 0
         long_str = self.get_long_str()
 
-        getStr = 'GET /' + long_str + ' HTTP/1.1\r\nHost: '
-        getStr += url + '\r\nConnection: Close\r\n\r\n'
-        get_rqst = IP(dst=syn_ack.src) / TCP(dport=80,
-                                             sport=syn_ack.dport,
-                                             seq=syn_ack.ack,
-                                             ack=syn_ack.seq + 1,
-                                             flags='A') / getStr
+        get_str = 'GET /' + long_str + ' HTTP/1.1\r\nHost: '
+        get_str += url + '\r\nConnection: Close\r\n\r\n'
+        get_rqst = IP(dst=syn_ack.src) \
+                   / TCP(dport=80, sport=syn_ack.dport, seq=syn_ack.ack, ack=syn_ack.seq + 1,
+                         flags='A') \
+                   / get_str
 
         send(get_rqst)
         # prn function takes effect and acts on the packet every step of the way
@@ -112,11 +111,9 @@ class ICWTest(object):
         return packets, get_rqst
 
     def send_rst(self, request):
-        rst = IP(dst=request['IP'].dst) / TCP(dport=80,
-                                              sport=request.sport,
-                                              seq=request.seq + len(request['TCP'].payload),
-                                              ack=self.prev_seqno + 1,
-                                              flags='R')
+        rst = IP(dst=request['IP'].dst) \
+              / TCP(dport=80, sport=request.sport, seq=request.seq + len(request['TCP'].payload),
+                    ack=self.prev_seqno + 1, flags='R')
 
         send(rst)
 
