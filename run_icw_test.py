@@ -31,10 +31,9 @@ def main():
 
         experiment = ICWTest(url=url)
         result, icw = experiment.run_test(
-            mss=mss,pcap_output='reproduction.pcap', rsport=rsport)
-        print("*"*32)
+            mss=mss, pcap_output='reproduction.pcap', rsport=rsport)
         if result == Result.SUCCESS:
-            print("==> Result: success!\nICW Estimate: %d" % icw)
+            print("==> Result: success!\n==> ICW Estimate: %d" % icw)
         else:
             print("==> Result: error: %s" % result)
 
