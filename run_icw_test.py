@@ -3,23 +3,18 @@ from argparse import ArgumentParser
 from icw_test import ICWTest
 import random
 
-def readList(filename):
-    url_list = []
-    with open(filename) as f:
-        for line in f:
-            split_line = line.split()
-            if(split_line):
-                url_list.append( split_line[0] )
-    return url_list
+def read_url_list(filename):
+    with open(filename, "r") as f:
+        return [line.split()[0] for line in f]
 
 def main():
     parser = ArgumentParser()
-    parser.add_argument('--url_list',
-                        help="File that contains the list of URLs to measure.",
-                        required=True)
+    parser.add_argument('--url_list', type=str, required=True,
+                        help="File that contains the list of URLs to measure.")
     args = parser.parse_args()
 
-    url_list = readList(args.url_list)
+    url_list = read_url_list(args.url_list)
+    print("Performing ICW test on %d URLs." % len(url_list))
     pcap_file = 'reproduction.pcap'
 
     # Some linux servers will automatically make it 64 per min, but 48 is safe
