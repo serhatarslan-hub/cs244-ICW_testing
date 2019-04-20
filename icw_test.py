@@ -98,7 +98,7 @@ class ICWTest(object):
         Generates a very long arbitrary string with the intent to increase the URL length,
         so that the response is large too.
         """
-        return 'chicken'*32
+        return 'AAAAAaaaaaBBBBBbbbbbCCCCCcccccDDDDDdddddEEEEEeeeee'*27
 
     def _send_request(self, url, syn_ack):
         """
