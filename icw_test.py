@@ -30,25 +30,24 @@ class ICWTest(object):
             pcap_output: pcap output filename
             rsport: receiver port (don't run multiple tests on the same port simultaneously)
         """
-        syn_ack = self.send_syn(self.url, rsport, mss)
+        syn_ack = self._send_syn(self.url, rsport, mss)
 
         if syn_ack:
             if syn_ack.sprintf("%TCP.flags%") == 'SA':
-
-                responses, request = self.send_request(self.url, syn_ack)
-                icw = self.get_icw(responses, mss)
-                self.send_rst(request)
+                responses, request = self._send_request(self.url, syn_ack)
+                icw = self._get_icw(responses, mss)
+                self._send_rst(request)
 
                 wrpcap(pcap_output, responses)
                 print("** ICW for ", self.url, ": ", icw)
         else:
             print("-> Could not get a SYN-ACK response")
 
-    def update_stream(self, packet):
+    def _update_stream(self, packet):
         self.prev_seqno = self.cur_seqno
         self.cur_seqno = packet.seq
 
-    def stop_stream(self, packet):
+    def _stop_stream(self, packet):
         FIN = 0x01
         F = packet['TCP'].flags
 
@@ -61,7 +60,7 @@ class ICWTest(object):
             return False
 
     # TODO: maybe try first the main page, then try this
-    def get_long_str(self):
+    def _get_long_str(self):
         '''
         Generate a very long arbitrary string that increases the url length,
         so that the response is large too.
@@ -72,7 +71,7 @@ class ICWTest(object):
             long_str = long_str + short_str
         return long_str
 
-    def send_syn(self, url, rsport, mss):
+    def _send_syn(self, url, rsport, mss):
         # TODO: wrap this again
         # try:
         syn = IP(dst=url) / TCP(sport=rsport, dport=80, flags='S', seq=1,
@@ -89,10 +88,10 @@ class ICWTest(object):
         else:
             return None
 
-    def send_request(self, url, syn_ack):
+    def _send_request(self, url, syn_ack):
         self.cur_seqno = 0
         self.prev_seqno = 0
-        long_str = self.get_long_str()
+        long_str = self._get_long_str()
 
         get_str = 'GET /' + long_str + ' HTTP/1.1\r\nHost: '
         get_str += url + '\r\nConnection: Close\r\n\r\n'
@@ -104,19 +103,19 @@ class ICWTest(object):
         send(get_rqst)
         # prn function takes effect and acts on the packet every step of the way
         # stop_filter
-        packets = sniff(filter='tcp src port 80', prn=self.update_stream,
-                        timeout=self.ret_timeout, stop_filter=self.stop_stream)
+        packets = sniff(filter='tcp src port 80', prn=self._update_stream,
+                        timeout=self.ret_timeout, stop_filter=self._stop_stream)
 
         return packets, get_rqst
 
-    def send_rst(self, request):
+    def _send_rst(self, request):
         rst = IP(dst=request['IP'].dst) \
               / TCP(dport=80, sport=request.sport, seq=request.seq + len(request['TCP'].payload),
                     ack=self.prev_seqno + 1, flags='R')
 
         send(rst)
 
-    def get_icw(self, responses, mss):
+    def _get_icw(self, responses, mss):
         seen_seqno = 0
         icw = 0
         FIN = 0x01
@@ -144,3 +143,4 @@ class ICWTest(object):
                     seen_seqno = pkt.seq
                     icw += 1
         return icw
+
