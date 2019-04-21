@@ -22,8 +22,8 @@ def main():
     urls = read_url_list(args.url_list)
     print("Performing ICW test on %d URLs." % len(urls))
 
-    # Some linux servers will automatically make it 64 per min, but 48 is safe
-    mss = 48
+    # "The MSS was set to 100 bytes."
+    mss = 100
 
     # Loop over ports from 2048 to 65500 in a random order
     ports = np.random.permutation(np.arange(2048, 65500))
@@ -50,6 +50,7 @@ def main():
             return
 
         try:
+            # "We tested each server five times."
             for trial in range(5):
                 print("*** Trial %d ***" % (trial+1))
                 experiment = ICWTest(url=url)
