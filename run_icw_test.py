@@ -14,14 +14,22 @@ def read_url_list(filename):
 
 def main():
     parser = ArgumentParser()
-    parser.add_argument('--url_list', type=str, required=True,
+    parser.add_argument('--url_list', type=str,
                         help="File that contains the list of URLs to measure.")
-    # parser.add_argument('--url', type=str,
-    #                     help="")
+    parser.add_argument('--host', type=str,
+                        help="Host URL or IP address to run the test on")
+    parser.add_argument('--debug', action='store_true', default=False,
+                        help="If specified, prints the last URL trace to debug.pcap.")
     args = parser.parse_args()
 
-    urls = read_url_list(args.url_list)
-    print("Performing ICW test on %d URLs." % len(urls))
+    if args.url_list:
+        urls = read_url_list(args.url_list)
+        print("Performing ICW test on %d URLs." % len(urls))
+    elif args.host:
+        urls = [args.host]
+    else:
+        print("One of --url_list and --host must be specified. (See -h for help.)")
+        return
 
     # "The MSS was set to 100 bytes."
     mss = 100
@@ -56,7 +64,7 @@ def main():
                 print("\n*** Trial %d ***" % (trial+1))
                 experiment = ICWTest(url=url)
                 result, icw = experiment.run_test(
-                    mss=mss, rsport=rsport, pcap_output='debug.pcap')
+                    mss=mss, rsport=rsport, pcap_output=('debug.pcap' if args.debug else None))
                 if result == Result.SUCCESS:
                     print("==> Result: success!\n==> ICW Estimate: %d" % icw)
                 else:
