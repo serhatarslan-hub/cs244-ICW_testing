@@ -187,13 +187,36 @@ class ICWTest(object):
 
 
 class Result(object):
+    # Success result
+    SUCCESS = "success"
+
+    # Failure modes not mentioned in the paper:
     MALFORMED_HOST = "malformed_host"  # User wrote bad host
     BAD_DNS = "dns"  # DNS lookup error (old host?)
     BAD_ACK = "bad_ack"
-    SYN_ACK_TIMEOUT = "ack_timeout"
-    FIN_PACKET = "fin"
     DIFFERENT_SOURCE = "different_source"
-    SUCCESS = "success"
+
+    # Failure modes from paper
+    
+    # (1) "TBIT did not receive a SYN/ACK in response to its SYN,
+    #      even after retransmissions, so no connection was established"
+    #     (we interpret this as retry=2)
+    SYN_ACK_TIMEOUT = "ack_timeout"
+
+    # (2)  "The server sent a SYN/ACK but did not send any data in
+    #       response to the HTTP request"
+    HTTP_TIMEOUT = "http_timeout"
+
+    # (3) "TBIT detected a packet loss"
+    PACKET_LOSS = "packet_loss"
+
+    # (4) "The remote server sent a packet with the RST or FIN flag set,
+    #      before the test was complete"
+    FIN_PACKET = "fin"
+
+    # (5) "The remote server sent a packet with MSS larger than the one
+    #      TBIT had specified"
+    LARGE_MSS = "large_mss"
 
 
 class ICWTestException(Exception):
