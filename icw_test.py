@@ -79,7 +79,7 @@ class ICWTest(object):
             raise ICWTestException(Result.BAD_DNS)
 
         # Wait for ack
-        ans, _ = sr(syn, timeout=self.ret_timeout)
+        ans, _ = sr(syn, timeout=self.ret_timeout, retry=2)
         if not ans:
             # TODO: verify that that is what happened here
             raise ICWTestException(Result.SYN_ACK_TIMEOUT)
