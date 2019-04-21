@@ -2,6 +2,8 @@ from scapy.all import send, sniff, sr, wrpcap  # send, receive, send/receive, an
 from scapy.all import IP, TCP  # header constructors
 from scapy.all import Padding  # packet layer
 import socket  # for capturing bad host errors
+FIN = 0x01
+RST = 0x04
 
 class ICWTest(object):
     """
@@ -9,7 +11,7 @@ class ICWTest(object):
     introduced by Padhye & Floyd 2001. Create one per URL.
     """
 
-    def __init__(self, url, ret_timeout=10):
+    def __init__(self, url, ret_timeout=5):
         """
         Args:
             url: the URL to perform the test on
@@ -32,11 +34,12 @@ class ICWTest(object):
 
         Returns tuple (result, icw), where icw will be None unless result is Result.SUCCESS.
         """
+        self.mss = mss
 
         try:
             # SYN/ACK
             print("Opening connection...")
-            syn_ack = self._open_connection(self.url, rsport, mss)
+            syn_ack = self._open_connection(self.url, rsport)
 
             # Validate ACK
             if not syn_ack.sprintf("%TCP.flags%") == 'SA':
@@ -50,7 +53,7 @@ class ICWTest(object):
                 raise ICWTestException(Result.HTTP_TIMEOUT)
 
             # Compute ICW
-            icw = self._get_icw(responses, mss)
+            icw = self._get_icw(responses)
 
             return Result.SUCCESS, icw
 
@@ -66,7 +69,7 @@ class ICWTest(object):
             if pcap_output is not None:
                 wrpcap(pcap_output, responses)
 
-    def _open_connection(self, url, rsport, mss):
+    def _open_connection(self, url, rsport):
         """
         Sends a SYN and waits for the responding SYN/ACK to open the TCP connection.
         Returns the SYN/ACK response or raises a ICWTestException on error.
@@ -75,7 +78,7 @@ class ICWTest(object):
         # Try to send SYN
         try:
             syn = IP(dst=url) \
-                  / TCP(sport=rsport, dport=80, flags='S', seq=1, options=[('MSS', mss)])
+                  / TCP(sport=rsport, dport=80, flags='S', seq=1, options=[('MSS', self.mss)])
         except socket.herror:
             raise ICWTestException(Result.MALFORMED_HOST)
         except socket.gaierror:
@@ -144,47 +147,42 @@ class ICWTest(object):
         """
         Stop packet filter for _send_request.
         """
-        FIN = 0x01
         flags = packet['TCP'].flags
+        segment_size = len(packet['TCP'].payload)
 
-        if packet['IP'].src != self.ip_of_url or packet.seq < self.prev_seqno or flags & FIN:
-            # TODO: any raise here?
-            # Response from a different source,
-            # Retransmission or FIN packet
+        if packet['IP'].src != self.ip_of_url:
+            raise ICWTestException(Result.DIFFERENT_SOURCE)
             return True
+
+        elif packet.seq < self.prev_seqno:
+            raise ICWTestException(Result.PACKET_LOSS)
+            return True
+
+        elif flags & FIN or flags & RST:
+            raise ICWTestException(Result.FIN_RST_PACKET)
+            return True
+
+        elif segment_size > self.mss:
+            raise ICWTestException(Result.LARGE_MSS)
+            return True
+
         else:
             return False
 
-    def _get_icw(self, responses, mss):
+    def _get_icw(self, responses):
         """
         Computes the initial congestion window from the provided packet stream.
         """
         seen_seqno = 0
         icw = 0
-        FIN = 0x01
 
-        for pkt in responses:
-            segment_size = len(pkt['TCP'].payload)
-            pad = pkt.getlayer(Padding)
-            flags = pkt['TCP'].flags
-
-            if pad:
-                segment_size -= len(pad)
-
-            if pkt['IP'].src != self.ip_of_url:
-                # Server responds from different source(s)
-                raise ICWTestException(Result.DIFFERENT_SOURCE)
-            elif segment_size == 0 and not (flags & FIN):
-                # Empty packet
-                continue
-            elif segment_size != mss or (flags & FIN):
-                # Either not a full packet or a FIN packet
-                # ICW test fails
-                raise ICWTestException(Result.FIN_PACKET)
-            else:
-                if seen_seqno < pkt.seq:
-                    seen_seqno = pkt.seq
-                    icw += 1
+        for packet in responses:
+            segment_size = len(packet['TCP'].payload)
+            pad = packet.getlayer(Padding)
+            flags = packet['TCP'].flags
+            if seen_seqno < packet.seq:
+                seen_seqno = packet.seq
+                icw += 1
         return icw
 
 
@@ -214,7 +212,7 @@ class Result(object):
 
     # (4) "The remote server sent a packet with the RST or FIN flag set,
     #      before the test was complete"
-    FIN_PACKET = "fin"
+    FIN_RST_PACKET = "fin_or_rst"
 
     # (5) "The remote server sent a packet with MSS larger than the one
     #      TBIT had specified"
