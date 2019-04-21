@@ -46,6 +46,8 @@ class ICWTest(object):
             # Perform HTTP request and collect responses
             responses, request = self._send_request(self.url, syn_ack)
             print("Received %d responses" % len(responses))
+            if len(responses) == 0:
+                raise ICWTestException(Result.HTTP_TIMEOUT)
 
             # Compute ICW
             icw = self._get_icw(responses, mss)
@@ -142,10 +144,9 @@ class ICWTest(object):
         Stop packet filter for _send_request.
         """
         FIN = 0x01
-        F = packet['TCP'].flags
+        flags = packet['TCP'].flags
 
-        if packet['IP'].src != self.ip_of_url or packet.seq < self.prev_seqno or (
-                F & FIN):
+        if packet['IP'].src != self.ip_of_url or packet.seq < self.prev_seqno or flags & FIN:
             # TODO: any raise here?
             # Response from a different source,
             # Retransmission or FIN packet
