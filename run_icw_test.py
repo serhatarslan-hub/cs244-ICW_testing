@@ -7,6 +7,7 @@ from collections import defaultdict
 
 
 def read_url_list(filename):
+    # TODO: read IPs
     with open(filename, "r") as f:
         return [line.split()[0] for line in f]
 
