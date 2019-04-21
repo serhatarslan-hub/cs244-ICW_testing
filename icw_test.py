@@ -220,6 +220,10 @@ class Result(object):
     #      TBIT had specified"
     LARGE_MSS = "large_mss"
 
+    # All possible results
+    ALL_RESULTS =  [SUCCESS, MALFORMED_HOST, BAD_DNS, BAD_ACK, DIFFERENT_SOURCE, SYN_ACK_TIMEOUT,
+                    HTTP_TIMEOUT, PACKET_LOSS, FIN_RST_PACKET, LARGE_MSS]
+
 
 class ICWTestException(Exception):
     """
