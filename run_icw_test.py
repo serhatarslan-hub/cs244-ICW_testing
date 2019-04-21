@@ -67,7 +67,7 @@ def main():
                       % rsport)
     
     # Process results to produce categories results for Table 2 (Section 4.1)
-    categories = [[]]*5
+    categories = [[], [], [], [], []]
     for url in urls:
         valid_icws = [x for x in icws[url] if x is not None]
 
@@ -117,12 +117,9 @@ def main():
     print("+----------------------------+")
     print("| Category  | Servers        |")
     print("+----------------------------+")
-    print("|         1 |"+"{0: >14}".format(len(categories[0]))+ " |")
-    print("|         2 |"+"{0: >14}".format(len(categories[1]))+ " |")
-    print("|         3 |"+"{0: >14}".format(len(categories[2]))+ " |")
-    print("|         4 |"+"{0: >14}".format(len(categories[3]))+ " |")
-    print("|         5 |"+"{0: >14}".format(len(categories[4]))+ " |")
-    print("|     Total |"+"{0: >14}".format(sum(categories))+ " |")
+    for i, c in enumerate(categories):
+        print(("|         %d |" % i+1)+"{0: >15}".format(len(c))+ " |")
+    print("|     Total |"+"{0: >15}".format(sum([len(c) for c in categories]))+ " |")
     print("+----------------------------+")
 
     # Only for category 1 URLs, compute results in Table 3 (Section 4.1)
@@ -132,12 +129,12 @@ def main():
     print("+----------------------------+")
     print("| ICW size  | Servers        |")
     print("+----------------------------+")
-    print("|         1 |"+"{0: >14}".format(np.sum(icws == 1))+ " |")
-    print("|         2 |"+"{0: >14}".format(np.sum(icws == 2))+ " |")
-    print("|         3 |"+"{0: >14}".format(np.sum(icws == 3))+ " |")
-    print("|         4 |"+"{0: >14}".format(np.sum(icws == 4))+ " |")
-    print("| 5 or more |"+"{0: >14}".format(np.sum(icws >= 5))+ " |")
-    print("|     Total |"+"{0: >14}".format(len(icws))+ " |")
+    print("|         1 |"+"{0: >15}".format(np.sum(icws == 1))+ " |")
+    print("|         2 |"+"{0: >15}".format(np.sum(icws == 2))+ " |")
+    print("|         3 |"+"{0: >15}".format(np.sum(icws == 3))+ " |")
+    print("|         4 |"+"{0: >15}".format(np.sum(icws == 4))+ " |")
+    print("| 5 or more |"+"{0: >15}".format(np.sum(icws >= 5))+ " |")
+    print("|     Total |"+"{0: >15}".format(len(icws))+ " |")
     print("+----------------------------+")
 
 if __name__ == "__main__":
