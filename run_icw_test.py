@@ -116,28 +116,28 @@ def main():
         categories[c-1].append(url)
 
     print("Table 2: ICW: Server categories")
-    print("+----------------------------+")
+    print("+-----------+----------------+")
     print("| Category  | Servers        |")
-    print("+----------------------------+")
+    print("+-----------+----------------+")
     for i, c in enumerate(categories):
         print(("|         %d |" % (i+1))+"{0: >15}".format(len(c))+ " |")
     print("|     Total |"+"{0: >15}".format(sum([len(c) for c in categories]))+ " |")
-    print("+----------------------------+")
+    print("+-----------+----------------+")
 
     # Only for category 1 URLs, compute results in Table 3 (Section 4.1)
     # The values in icw[url] are guaranteed to be all the same at this point
     icws = np.array([icws[url][0] for url in categories[0]])
     print("Table 3: ICW: Summary results")
-    print("+----------------------------+")
+    print("+-----------+----------------+")
     print("| ICW size  | Servers        |")
-    print("+----------------------------+")
+    print("+-----------+----------------+")
     print("|         1 |"+"{0: >15}".format(np.sum(icws == 1))+ " |")
     print("|         2 |"+"{0: >15}".format(np.sum(icws == 2))+ " |")
     print("|         3 |"+"{0: >15}".format(np.sum(icws == 3))+ " |")
     print("|         4 |"+"{0: >15}".format(np.sum(icws == 4))+ " |")
     print("| 5 or more |"+"{0: >15}".format(np.sum(icws >= 5))+ " |")
     print("|     Total |"+"{0: >15}".format(len(icws))+ " |")
-    print("+----------------------------+")
+    print("+-----------+----------------+")
 
 if __name__ == "__main__":
     main()
