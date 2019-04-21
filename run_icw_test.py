@@ -53,7 +53,7 @@ def main():
         try:
             # "We tested each server five times."
             for trial in range(5):
-                print("*** Trial %d ***" % (trial+1))
+                print("\n*** Trial %d ***" % (trial+1))
                 experiment = ICWTest(url=url)
                 result, icw = experiment.run_test(
                     mss=mss, rsport=rsport, pcap_output='debug.pcap')
