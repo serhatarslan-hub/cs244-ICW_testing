@@ -35,6 +35,7 @@ class ICWTest(object):
 
         try:
             # SYN/ACK
+            print("Opening connection...")
             syn_ack = self._open_connection(self.url, rsport, mss)
 
             # Validate ACK
@@ -50,6 +51,7 @@ class ICWTest(object):
             icw = self._get_icw(responses, mss)
 
             # Close connection using a RST packet and write experiment output
+            print("Closing connection...")
             self._close_connection(request)
             if pcap_output is not None:
                 wrpcap(pcap_output, responses)
