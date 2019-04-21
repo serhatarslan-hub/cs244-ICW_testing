@@ -125,7 +125,7 @@ def main():
 
     # Only for category 1 URLs, compute results in Table 3 (Section 4.1)
     # The values in icw[url] are guaranteed to be all the same at this point
-    icws = np.array([icw[url][0] for url in categories[0]])
+    icws = np.array([icws[url][0] for url in categories[0]])
     print("Table 3: ICW: Summary results")
     print("+----------------------------+")
     print("| ICW size  | Servers        |")
