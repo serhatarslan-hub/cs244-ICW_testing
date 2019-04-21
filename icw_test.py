@@ -55,6 +55,10 @@ class ICWTest(object):
             # Compute ICW
             icw = self._get_icw(responses)
 
+            # Close connection using a RST packet
+            print("Closing connection...")
+            self._close_connection(request)
+
             return Result.SUCCESS, icw
 
         except ICWTestException as e:
@@ -63,9 +67,7 @@ class ICWTest(object):
             return e.message, None
 
         finally:
-            # Close connection using a RST packet and write experiment output
-            print("Closing connection...")
-            self._close_connection(request)
+            # Write experiment output
             if pcap_output is not None:
                 wrpcap(pcap_output, responses)
 
