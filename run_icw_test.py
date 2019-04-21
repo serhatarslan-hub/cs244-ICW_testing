@@ -118,7 +118,7 @@ def main():
     print("| Category  | Servers        |")
     print("+----------------------------+")
     for i, c in enumerate(categories):
-        print(("|         %d |" % i+1)+"{0: >15}".format(len(c))+ " |")
+        print(("|         %d |" % (i+1))+"{0: >15}".format(len(c))+ " |")
     print("|     Total |"+"{0: >15}".format(sum([len(c) for c in categories]))+ " |")
     print("+----------------------------+")
 
