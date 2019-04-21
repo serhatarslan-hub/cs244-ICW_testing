@@ -52,18 +52,19 @@ class ICWTest(object):
             # Compute ICW
             icw = self._get_icw(responses, mss)
 
-            # Close connection using a RST packet and write experiment output
-            print("Closing connection...")
-            self._close_connection(request)
-            if pcap_output is not None:
-                wrpcap(pcap_output, responses)
-
             return Result.SUCCESS, icw
 
         except ICWTestException as e:
             print("Test aborted: %s" % e.message)
             # Returns one of the Result options defined below
             return e.message, None
+
+        finally:
+            # Close connection using a RST packet and write experiment output
+            print("Closing connection...")
+            self._close_connection(request)
+            if pcap_output is not None:
+                wrpcap(pcap_output, responses)
 
     def _open_connection(self, url, rsport, mss):
         """
