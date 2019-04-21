@@ -62,7 +62,7 @@ class ICWTest(object):
             # Write experiment output
             if pcap_output is not None:
                 wrpcap(pcap_output, responses)
-                
+
             return Result.SUCCESS, icw
 
         except ICWTestException as e:
@@ -150,7 +150,10 @@ class ICWTest(object):
         """
         flags = packet['TCP'].flags
         segment_size = len(packet['TCP'].payload)
-
+        pad = packet.getlayer(Padding)
+        if pad:
+            segment_size -= len(pad)
+            
         if packet['IP'].src != self.ip_of_url:
             raise ICWTestException(Result.DIFFERENT_SOURCE)
             return True
@@ -165,6 +168,10 @@ class ICWTest(object):
 
         elif segment_size > self.mss:
             raise ICWTestException(Result.LARGE_MSS)
+            return True
+
+        elif segment_size < self.mss:
+            raise ICWTestException(Result.FILE_ENDED)
             return True
 
         else:
@@ -193,14 +200,6 @@ class Result(object):
     # Success result
     SUCCESS = "success"
 
-    # Failure modes not mentioned in the paper:
-    MALFORMED_HOST = "malformed_host"  # User wrote bad host
-    BAD_DNS = "dns"  # DNS lookup error (old host?)
-    BAD_ACK = "bad_ack"
-    DIFFERENT_SOURCE = "different_source"
-
-    # Failure modes from paper
-    
     # (1) "TBIT did not receive a SYN/ACK in response to its SYN,
     #      even after retransmissions, so no connection was established"
     #     (we interpret this as retry=2)
@@ -220,6 +219,13 @@ class Result(object):
     # (5) "The remote server sent a packet with MSS larger than the one
     #      TBIT had specified"
     LARGE_MSS = "large_mss"
+
+    # Additional failure modes not explicitly mentioned in the paper:
+    MALFORMED_HOST = "malformed_host"  # User wrote bad host
+    BAD_DNS = "dns"  # DNS lookup error (old host?)
+    BAD_ACK = "bad_ack"  # Bad ack response
+    DIFFERENT_SOURCE = "different_source"  # Different IP response
+    FILE_ENDED = "file_ended"  # Got a smaller than expected packet, so can't fill the ICW
 
     # All possible results
     ALL_RESULTS =  [SUCCESS, MALFORMED_HOST, BAD_DNS, BAD_ACK, DIFFERENT_SOURCE, SYN_ACK_TIMEOUT,
