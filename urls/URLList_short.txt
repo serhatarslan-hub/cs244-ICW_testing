@@ -1,4 +1,4 @@
-www.stanford.edu 0.0.0.0
+www.stanford.edu
 www.google.com
 www.hurriyet.com.tr
 www.youtube.com
