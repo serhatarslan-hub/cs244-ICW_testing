@@ -180,6 +180,8 @@ class ICWTest(object):
         for packet in responses:
             segment_size = len(packet['TCP'].payload)
             pad = packet.getlayer(Padding)
+            if pad:
+                segment_size -= len(pad)
             flags = packet['TCP'].flags
             if seen_seqno < packet.seq:
                 seen_seqno = packet.seq
