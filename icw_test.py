@@ -1,4 +1,3 @@
-# from urllib.parse import urlparse
 from scapy.all import send, sniff, sr, wrpcap  # send, receive, send/receive, and write pcap
 from scapy.all import IP, TCP  # header constructors
 from scapy.all import Padding  # packet layer
@@ -57,6 +56,7 @@ class ICWTest(object):
             icw = self._get_icw(responses)
 
             # Close connection using a RST packet
+            #TODO: close connection even if you raised an exception
             print("Closing connection...")
             self._close_connection(request)
 
@@ -79,7 +79,6 @@ class ICWTest(object):
 
         # Try to send SYN
         try:
-
             syn = IP(dst=url) \
                   / TCP(sport=rsport, dport=80, flags='S', seq=1, options=[('MSS', self.mss)])
         except socket.herror:
@@ -150,20 +149,20 @@ class ICWTest(object):
         """
         Stop packet filter for _send_request.
         """
-        print(packet)
         flags = packet['TCP'].flags
         segment_size = len(packet['TCP'].payload)
-        print(segment_size)
         pad = packet.getlayer(Padding)
         if pad:
             segment_size -= len(pad)
-
+            
         if packet['IP'].src != self.ip_of_url:
             raise ICWTestException(Result.DIFFERENT_SOURCE)
             return True
 
         elif packet.seq < self.prev_seqno:
-            raise ICWTestException(Result.PACKET_LOSS)
+            # TODO: This scenario is retransmission which we want to see,
+            # so don't raise execption
+            #raise ICWTestException(Result.PACKET_LOSS)
             return True
 
         elif flags & FIN or flags & RST:
@@ -174,7 +173,8 @@ class ICWTest(object):
             raise ICWTestException(Result.LARGE_MSS)
             return True
 
-        elif segment_size < self.mss:
+        elif segment_size < self.mss \
+            and segment_size != 0:
             raise ICWTestException(Result.FILE_ENDED)
             return True
 
@@ -188,19 +188,12 @@ class ICWTest(object):
         seen_seqno = 0
         icw = 0
 
-        print("Responses")
-
         for packet in responses:
-            print(packet)
             segment_size = len(packet['TCP'].payload)
             pad = packet.getlayer(Padding)
             if pad:
                 segment_size -= len(pad)
-
-            print("len:")
-            print(segment_size)
-            print("packet seq:")
-            print(packet.seq)
+            flags = packet['TCP'].flags
             if seen_seqno < packet.seq:
                 seen_seqno = packet.seq
                 icw += 1
