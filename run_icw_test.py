@@ -90,7 +90,7 @@ def main():
         print("="*32)
         
         # Attempt to block port using iptables        
-        os.system("iptables -A OUTPUT -p tcp --dport 80 --tcp-flags RST RST -j DROP")
+        os.system("iptables -A OUTPUT -p tcp --sport %d --tcp-flags RST RST -j DROP" % rsport)
 
         try:
             # "We tested each server five times."
@@ -109,7 +109,7 @@ def main():
                 rsport += 1
         finally:
             # Undo firewall rule
-            os.system("iptables -D OUTPUT -p tcp --dport 80 --tcp-flags RST RST -j DROP")
+            os.system("iptables -D OUTPUT -p tcp --sport %d --tcp-flags RST RST -j DROP" % rsport)
    
     # Process results to produce categories results for Table 2 (Section 4.1)
     categories = [[], [], [], [], []]
