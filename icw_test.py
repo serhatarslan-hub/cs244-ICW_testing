@@ -199,7 +199,7 @@ class ICWTest(object):
         Computes the initial congestion window from the provided packet stream.
         """
         seen_seqno = 0
-        icw = 0
+        total_bytes = 0
 
         for packet in responses:
             print("packet!")
@@ -211,8 +211,9 @@ class ICWTest(object):
             flags = packet['TCP'].flags
             if seen_seqno < packet.seq:
                 seen_seqno = packet.seq
-                icw += 1
-        return icw
+                total_bytes +=segment_size
+
+        return total_bytes // self.mss
 
 
 class Result(object):
