@@ -21,7 +21,7 @@ def print_table_2(categories):
     print("|     Total |"+"{0: >15}".format(sum([len(c) for c in categories]))+ " |")
     print("+-----------+----------------+")
 
-def print_table_3(categories,icws):
+def print_table_3(categories, icws):
     # Only for category 1 URLs, compute results in Table 3 (Section 4.1)
     # The values in icw[url] are guaranteed to be all the same at this point
     icws = np.array([icws[url][0] for url in categories[0]])
@@ -61,6 +61,7 @@ def main():
     num_trials = 5
 
     # Loop over ports from 2048 to 65500 in a random order
+    # in spaces of 5
     ports = np.random.permutation(np.arange(2048, 65500, num_trials))
 
     # Results becomes a map from URL to 5 trials like
@@ -73,7 +74,6 @@ def main():
 
     for url, rsport in zip(urls, ports):
         print("="*32)
-        print("Testing: %s on port %d" % (url, rsport))
         
         # Block the OS kernel from processing packets on this port
         try:
@@ -87,6 +87,7 @@ def main():
         try:
             # "We tested each server five times."
             for trial in range(num_trials):
+                print("Testing: %s on port %d" % (url, rsport))
                 print("\n*** Trial %d ***" % (trial+1))
                 experiment = ICWTest(url=url)
                 result, icw = experiment.run_test(
@@ -138,9 +139,8 @@ def main():
         #  the same, the server is added to category 4. We would like to
         #  minimize the number of servers that fall in this category as
         #  well."
-        elif ( results[url].count(Result.SUCCESS) == 2 \
-            and not all(x == valid_icws[0] for x in valid_icws) ) \
-            or results[url].count(Result.SUCCESS) == 1:
+        elif results[url].count(Result.SUCCESS) >= 1 \
+            and not all(x == valid_icws[0] for x in valid_icws):
             c = 4
 
         # "If none of the five tests returned a result, this server was
