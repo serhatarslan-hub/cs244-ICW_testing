@@ -50,8 +50,7 @@ class ICWTest(object):
             self.ip_of_url = syn_ack.src
 
             # Perform HTTP request and collect responses
-            responses, request = self._send_request(self.url, syn_ack)
-            self.request = request
+            responses = self._send_request(self.url, syn_ack)
             print("Received %d responses" % len(responses))
             if len(responses) == 0:
                 raise ICWTestException(Result.HTTP_TIMEOUT)
@@ -85,7 +84,8 @@ class ICWTest(object):
         # Try to send SYN
         try:
             syn = IP(dst=url) \
-                  / TCP(sport=rsport, dport=80, flags='S', seq=1, options=[('MSS', self.mss)])
+                  / TCP(sport=rsport, dport=80, flags='S', seq=1,
+                        options=[('MSS', self.mss)])
         except socket.herror:
             raise ICWTestException(Result.MALFORMED_HOST)
         except socket.gaierror:
@@ -104,7 +104,8 @@ class ICWTest(object):
         Sends a packet with the RST flag set to close the TCP connection.
         """
         rst = IP(dst=request['IP'].dst) \
-              / TCP(dport=80, sport=request.sport, seq=request.seq + len(request['TCP'].payload),
+              / TCP(dport=80, sport=request.sport,
+                    seq=request.seq + len(request['TCP'].payload),
                     ack=self.prev_seqno + 1, flags='R')
 
         send(rst)
@@ -112,14 +113,15 @@ class ICWTest(object):
     # TODO: maybe try first the main page, then try this
     def _get_long_str(self):
         """
-        Generates a very long arbitrary string with the intent to increase the URL length,
-        so that the response is large too.
+        Generates a very long arbitrary string with the intent to increase the
+        URL length, so that the "URL not found" response is large too.
         """
         return 'AAAAAaaaaaBBBBBbbbbbCCCCCcccccDDDDDdddddEEEEEeeeee'*27
 
     def _send_request(self, url, syn_ack):
         """
-        Sends the HTTP request and waits for incoming packets with the provided filters.
+        Sends the HTTP request and waits for incoming packets with the provided
+        filters.
         """
         self.cur_seqno = 0
         self.prev_seqno = 0
@@ -128,28 +130,29 @@ class ICWTest(object):
         # Construct GET requestr
         get_str = 'GET /' + long_str + ' HTTP/1.1\r\nHost: ' \
                   + url + '\r\nConnection: Close\r\n\r\n'
-        get_rqst = IP(dst=syn_ack.src) \
-                   / TCP(dport=80, sport=syn_ack.dport, seq=syn_ack.ack, ack=syn_ack.seq + 1,
-                         flags='A') \
-                   / get_str
+        self.request = IP(dst=syn_ack.src) \
+                       / TCP(dport=80, sport=syn_ack.dport, seq=syn_ack.ack,
+                             ack=syn_ack.seq + 1, flags='A') \
+                       / get_str
 
         # Send request
-        send(get_rqst)
+        send(self.request)
 
-        # Listen for responses. The prn function takes acts on every packet and stop_filter aborts
-        # when we see a response from a different source, a retransmission, or a FIN packet.
-        f = lambda packet: packet['TCP'].sport == 80 and packet['TCP'].dport == self.rsport# packet['IP'].src == self.ip_of_url
-        packets = sniff(lfilter=f, prn=self._update_stream,
-                        timeout=self.ret_timeout, stop_filter=self._stop_stream, iface='ens4')
+        # Listen for responses. The prn function takes acts on every packet and
+        # stop_filter aborts when we see a response from a different source,
+        # a retransmission, or a FIN or RST packet.
+        f = lambda pck: 'TCP' in pck and pck['TCP'].dport == self.rsport
+        packets = sniff(lfilter=f,
+                        prn=self._update_stream,
+                        timeout=self.ret_timeout,
+                        stop_filter=self._stop_stream)
 
-        return packets, get_rqst
+        return packets
 
     def _update_stream(self, packet):
         """
         Update state helper for _send_request.
         """
-        print("boom")
-        print(packet)
         self.prev_seqno = self.cur_seqno
         self.cur_seqno = packet.seq
 
@@ -162,27 +165,23 @@ class ICWTest(object):
         pad = packet.getlayer(Padding)
         if pad:
             segment_size -= len(pad)
-
-        print("packet stream seeing")
-        print(packet)
-        return False
             
-        if packet['IP'].src != self.ip_of_url:
-            raise ICWTestException(Result.DIFFERENT_SOURCE)
-            return True
+        # TODO
+        # if packet['IP'].src != self.ip_of_url:
+        #     raise ICWTestException(Result.DIFFERENT_SOURCE)
+        #     return True
 
         elif packet.seq < self.prev_seqno:
             # TODO: This scenario is retransmission which we want to see,
             # so don't raise execption
             #raise ICWTestException(Result.PACKET_LOSS)
-            print(packet)
-            print("Stopping stream")
             return True
 
         elif flags & FIN or flags & RST:
             raise ICWTestException(Result.FIN_RST_PACKET)
             return True
 
+        # TODO
         # elif segment_size > self.mss:
         #     raise ICWTestException(Result.LARGE_MSS)
         #     return True
