@@ -3,6 +3,8 @@ from scapy.all import IP, TCP  # header constructors
 from scapy.all import Padding  # packet layer
 import socket  # for capturing bad host errors
 import os
+from multiprocessing.pool import ThreadPool
+
 FIN = 0x01
 RST = 0x04
 
@@ -117,6 +119,17 @@ class ICWTest(object):
         """
         return 'AAAAAaaaaaBBBBBbbbbbChCCCcicccDDcDDddkddEEEEEeeene'*27
 
+    def _start_sniff(self):
+        # Listen for responses. The prn function takes acts on every packet and
+        # stop_filter aborts when we see a response from a different source,
+        # a retransmission, or a FIN or RST packet.
+        f = lambda pck: 'TCP' in pck and pck['TCP'].dport == self.rsport
+        packets = sniff(lfilter=f,
+                        prn=self._update_stream,
+                        timeout=self.ret_timeout,
+                        stop_filter=self._stop_stream)
+        return packets
+
     def _send_request(self, url, syn_ack):
         """
         Sends the HTTP request and waits for incoming packets with the provided
@@ -134,17 +147,18 @@ class ICWTest(object):
                              ack=syn_ack.seq + 1, flags='A') \
                        / get_str
 
+        # Start listener
+        # We do this on a background thread to ensure that sniff is set up by
+        # the time that we are ready to receive packets.
+        # Otherwise this fails for VMs with extremely fast attachments testing
+        # closeby servers. (e.g. attempting to run this test for google.com
+        # from a server provisioned on Google Cloud).
+        pool = ThreadPool(processes=1)
+        async = pool.apply_async(self._start_sniff)
+
         # Send request
         send(self.request)
-
-        # Listen for responses. The prn function takes acts on every packet and
-        # stop_filter aborts when we see a response from a different source,
-        # a retransmission, or a FIN or RST packet.
-        f = lambda pck: 'TCP' in pck and pck['TCP'].dport == self.rsport
-        packets = sniff(lfilter=f,
-                        prn=self._update_stream,
-                        timeout=self.ret_timeout,
-                        stop_filter=self._stop_stream)
+        packets = async.get()
 
         return packets
 
@@ -164,13 +178,13 @@ class ICWTest(object):
         pad = packet.getlayer(Padding)
         if pad:
             segment_size -= len(pad)
-            
+        
         # TODO
         # if packet['IP'].src != self.ip_of_url:
         #     raise ICWTestException(Result.DIFFERENT_SOURCE)
         #     return True
 
-        elif packet.seq < self.prev_seqno:
+        if packet.seq < self.prev_seqno:
             # TODO: This scenario is retransmission which we want to see,
             # so don't raise execption
             #raise ICWTestException(Result.PACKET_LOSS)
