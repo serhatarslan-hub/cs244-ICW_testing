@@ -2,7 +2,6 @@ from scapy.all import send, sniff, sr, wrpcap  # send, receive, send/receive, an
 from scapy.all import IP, TCP  # header constructors
 from scapy.all import Padding  # packet layer
 import socket  # for capturing bad host errors
-import os
 from multiprocessing.pool import ThreadPool
 
 FIN = 0x01
@@ -42,7 +41,6 @@ class ICWTest(object):
 
         try:
             # SYN/ACK
-            os.system("iptables -A OUTPUT -p tcp --dport 80 --tcp-flags RST RST -j DROP")
             print("Opening connection...")
             syn_ack = self._open_connection(self.url, rsport)
 
@@ -74,7 +72,6 @@ class ICWTest(object):
         finally:
             # Close connection using a RST packet
             if hasattr(self, "request"):
-                os.system("iptables -D OUTPUT -p tcp --dport 80 --tcp-flags RST RST -j DROP")
                 self._close_connection(self.request)
 
     def _open_connection(self, url, rsport):
