@@ -7,20 +7,35 @@ The results are designed to be reproduced on a machine running Ubuntu 14.04. Bel
 ## Installation and Reproduction Steps:
 
 1. Get a copy of the code
+
     ```
     git clone https://github.com/serhatarslan-hub/cs244-tbit_icw_reproduction.git
-    cd cs244-tbit_icw_reproduction
     ```
 
 2. Install the python dependencies and make sure they're accessible to the root user:
+3. 
     ```
+    cd cs244-tbit_icw_reproduction
     sudo pip install -r requirements.txt
     ```
 
 3. Reproduce the results (this will take some time):
+
     ```
-    sudo python run_icw_test.py
+    sudo python run_icw_test.py --url_list urls/URLListFeb2004.txt
     ```
+
+To estimate the initial congestion window of an IP of your choice `YOUR_IP`, simply run:
+
+```
+sudo python run_icw_test.py --host YOUR_IP
+```
+
+For more options, see:
+
+```
+python run_icw_test.py --help
+```
 
 ## Reproduction Philosophy
 
