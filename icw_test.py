@@ -115,7 +115,7 @@ class ICWTest(object):
         Generates a very long arbitrary string with the intent to increase the
         URL length, so that the "URL not found" response is large too.
         """
-        return 'AAAAAaaaaaBBBBBbbbbbCCCCCcccccDDDDDdddddEEEEEeeeee'*27
+        return 'AAAAAaaaaaBBBBBbbbbbChCCCcicccDDcDDddkddEEEEEeeene'*27
 
     def _send_request(self, url, syn_ack):
         """
