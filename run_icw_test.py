@@ -7,11 +7,14 @@ from collections import defaultdict
 import socket
 
 def read_url_list(filename):
-    # TODO: read IPs instead of URLs?
     with open(filename, "r") as f:
         return [line.split()[0] for line in f]
 
+
 def print_table_2(categories):
+    """
+    Print the results in Table 3 (Section 4.1)
+    """
     print("Table 2: ICW: Server categories")
     print("+-----------+----------------+")
     print("| Category  | Servers        |")
@@ -21,9 +24,12 @@ def print_table_2(categories):
     print("|     Total |"+"{0: >15}".format(sum([len(c) for c in categories]))+ " |")
     print("+-----------+----------------+")
 
+
 def print_table_3(categories, icws):
-    # Only for category 1 URLs, compute results in Table 3 (Section 4.1)
-    # The values in icw[url] are guaranteed to be all the same at this point
+    """
+    Only for category 1 URLs, compute and print results in Table 3 (Section 4.1)
+    The values in icw[url] are guaranteed to be all the same at this point
+    """
     icws = np.array([icws[url][0] for url in categories[0]])
     print("Table 3: ICW: Summary results")
     print("+-----------+----------------+")
@@ -36,6 +42,7 @@ def print_table_3(categories, icws):
     print("| 5 or more |"+"{0: >15}".format(np.sum(icws >= 5))+ " |")
     print("|     Total |"+"{0: >15}".format(len(icws))+ " |")
     print("+-----------+----------------+")
+
 
 def main():
     parser = ArgumentParser()
@@ -155,7 +162,7 @@ def main():
 
     # Print the reproduction tables from "On Inferring TCP Behavior"
     print_table_2(categories)
-    print_table_3(categories,icws)
+    print_table_3(categories, icws)
 
 if __name__ == "__main__":
     main()
