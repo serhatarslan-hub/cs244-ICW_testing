@@ -11,6 +11,31 @@ def read_url_list(filename):
     with open(filename, "r") as f:
         return [line.split()[0] for line in f]
 
+def print_table_2(categories):
+    print("Table 2: ICW: Server categories")
+    print("+-----------+----------------+")
+    print("| Category  | Servers        |")
+    print("+-----------+----------------+")
+    for i, c in enumerate(categories):
+        print(("|         %d |" % (i+1))+"{0: >15}".format(len(c))+ " |")
+    print("|     Total |"+"{0: >15}".format(sum([len(c) for c in categories]))+ " |")
+    print("+-----------+----------------+")
+
+def print_table_3(categories, icws):
+    # Only for category 1 URLs, compute results in Table 3 (Section 4.1)
+    # The values in icw[url] are guaranteed to be all the same at this point
+    icws = np.array([icws[url][0] for url in categories[0]])
+    print("Table 3: ICW: Summary results")
+    print("+-----------+----------------+")
+    print("| ICW size  | Servers        |")
+    print("+-----------+----------------+")
+    print("|         1 |"+"{0: >15}".format(np.sum(icws == 1))+ " |")
+    print("|         2 |"+"{0: >15}".format(np.sum(icws == 2))+ " |")
+    print("|         3 |"+"{0: >15}".format(np.sum(icws == 3))+ " |")
+    print("|         4 |"+"{0: >15}".format(np.sum(icws == 4))+ " |")
+    print("| 5 or more |"+"{0: >15}".format(np.sum(icws >= 5))+ " |")
+    print("|     Total |"+"{0: >15}".format(len(icws))+ " |")
+    print("+-----------+----------------+")
 
 def main():
     parser = ArgumentParser()
@@ -33,9 +58,11 @@ def main():
 
     # "The MSS was set to 100 bytes."
     mss = 100
+    num_trials = 5
 
     # Loop over ports from 2048 to 65500 in a random order
-    ports = np.random.permutation(np.arange(2048, 65500))
+    # in spaces of 5
+    ports = np.random.permutation(np.arange(2048, 65500, num_trials))
 
     # Results becomes a map from URL to 5 trials like
     # {"www.google.com": ["success", "success", "success", "success", "fin"],
@@ -47,8 +74,7 @@ def main():
 
     for url, rsport in zip(urls, ports):
         print("="*32)
-        print("Testing: %s on port %d" % (url, rsport))
-
+        
         # Block the OS kernel from processing packets on this port
         try:
             os.system("iptables -t raw -A PREROUTING -p tcp --dport %d -j DROP"
@@ -57,10 +83,11 @@ def main():
             print("==> Failed to set up firewall rule. Make sure iptables is\n"
                   "    set up correctly.")
             return
-
+        
         try:
             # "We tested each server five times."
-            for trial in range(5):
+            for trial in range(num_trials):
+                print("Testing: %s on port %d" % (url, rsport))
                 print("\n*** Trial %d ***" % (trial+1))
                 experiment = ICWTest(url=url)
                 result, icw = experiment.run_test(
@@ -71,11 +98,12 @@ def main():
                     print("==> Result: error: %s" % result)
                 results[url].append(result)
                 icws[url].append(icw)
+                rsport += 1
         finally:
             # Undo firewall rule
             os.system("iptables -t raw -D PREROUTING -p tcp --dport %d -j DROP"
                       % rsport)
-    
+   
     # Process results to produce categories results for Table 2 (Section 4.1)
     categories = [[], [], [], [], []]
     for url in urls:
@@ -123,29 +151,9 @@ def main():
 
         categories[c-1].append(url)
 
-    print("Table 2: ICW: Server categories")
-    print("+-----------+----------------+")
-    print("| Category  | Servers        |")
-    print("+-----------+----------------+")
-    for i, c in enumerate(categories):
-        print(("|         %d |" % (i+1))+"{0: >15}".format(len(c))+ " |")
-    print("|     Total |"+"{0: >15}".format(sum([len(c) for c in categories]))+ " |")
-    print("+-----------+----------------+")
-
-    # Only for category 1 URLs, compute results in Table 3 (Section 4.1)
-    # The values in icw[url] are guaranteed to be all the same at this point
-    icws = np.array([icws[url][0] for url in categories[0]])
-    print("Table 3: ICW: Summary results")
-    print("+-----------+----------------+")
-    print("| ICW size  | Servers        |")
-    print("+-----------+----------------+")
-    print("|         1 |"+"{0: >15}".format(np.sum(icws == 1))+ " |")
-    print("|         2 |"+"{0: >15}".format(np.sum(icws == 2))+ " |")
-    print("|         3 |"+"{0: >15}".format(np.sum(icws == 3))+ " |")
-    print("|         4 |"+"{0: >15}".format(np.sum(icws == 4))+ " |")
-    print("| 5 or more |"+"{0: >15}".format(np.sum(icws >= 5))+ " |")
-    print("|     Total |"+"{0: >15}".format(len(icws))+ " |")
-    print("+-----------+----------------+")
+    # Print the reproduction tables from "On Inferring TCP Behavior"
+    print_table_2(categories)
+    print_table_3(categories,icws)
 
 if __name__ == "__main__":
     main()
