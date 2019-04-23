@@ -206,7 +206,7 @@ class ICWTest(object):
             if pad:
                 segment_size -= len(pad)
             flags = packet['TCP'].flags
-            if seen_seqno < packet.seq and segment_size > 0:
+            if seen_seqno <= packet.seq:
                 seen_seqno = packet.seq
                 total_bytes += segment_size
 
