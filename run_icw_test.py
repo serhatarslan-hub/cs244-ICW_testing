@@ -4,14 +4,17 @@ import os
 from argparse import ArgumentParser
 from icw_test import ICWTest, Result
 from collections import defaultdict
-
+import socket
 
 def read_url_list(filename):
-    # TODO: read IPs instead of URLs?
     with open(filename, "r") as f:
         return [line.split()[0] for line in f]
 
+
 def print_table_2(categories):
+    """
+    Print the results in Table 3 (Section 4.1)
+    """
     print("Table 2: ICW: Server categories")
     print("+-----------+----------------+")
     print("| Category  | Servers        |")
@@ -21,21 +24,32 @@ def print_table_2(categories):
     print("|     Total |"+"{0: >15}".format(sum([len(c) for c in categories]))+ " |")
     print("+-----------+----------------+")
 
+
 def print_table_3(categories, icws):
-    # Only for category 1 URLs, compute results in Table 3 (Section 4.1)
-    # The values in icw[url] are guaranteed to be all the same at this point
+    """
+    Only for category 1 URLs, compute and print results in Table 3 (Section 4.1)
+    The values in icw[url] are guaranteed to be all the same at this point
+    """
     icws = np.array([icws[url][0] for url in categories[0]])
     print("Table 3: ICW: Summary results")
-    print("+-----------+----------------+")
-    print("| ICW size  | Servers        |")
-    print("+-----------+----------------+")
-    print("|         1 |"+"{0: >15}".format(np.sum(icws == 1))+ " |")
-    print("|         2 |"+"{0: >15}".format(np.sum(icws == 2))+ " |")
-    print("|         3 |"+"{0: >15}".format(np.sum(icws == 3))+ " |")
-    print("|         4 |"+"{0: >15}".format(np.sum(icws == 4))+ " |")
-    print("| 5 or more |"+"{0: >15}".format(np.sum(icws >= 5))+ " |")
-    print("|     Total |"+"{0: >15}".format(len(icws))+ " |")
-    print("+-----------+----------------+")
+    print("+------------+----------------+")
+    print("| ICW size   | Servers        |")
+    print("+------------+----------------+")
+    print("|          1 |"+"{0: >15}".format(np.sum(icws == 1))+ " |")
+    print("|          2 |"+"{0: >15}".format(np.sum(icws == 2))+ " |")
+    print("|          3 |"+"{0: >15}".format(np.sum(icws == 3))+ " |")
+    print("|          4 |"+"{0: >15}".format(np.sum(icws == 4))+ " |")
+    print("|          5 |"+"{0: >15}".format(np.sum(icws == 5))+ " |")
+    print("|          6 |"+"{0: >15}".format(np.sum(icws == 6))+ " |")
+    print("|          7 |"+"{0: >15}".format(np.sum(icws == 7))+ " |")
+    print("|          8 |"+"{0: >15}".format(np.sum(icws == 8))+ " |")
+    print("|          9 |"+"{0: >15}".format(np.sum(icws == 9))+ " |")
+    print("|         10 |"+"{0: >15}".format(np.sum(icws == 10))+ " |")
+    print("|         11 |"+"{0: >15}".format(np.sum(icws == 11))+ " |")
+    print("| 12 or more |"+"{0: >15}".format(np.sum(icws >= 12))+ " |")
+    print("|      Total |"+"{0: >15}".format(len(icws))+ " |")
+    print("+------------+----------------+")
+
 
 def main():
     parser = ArgumentParser()
@@ -75,20 +89,14 @@ def main():
     for url, rsport in zip(urls, ports):
         print("="*32)
         
-        # Block the OS kernel from processing packets on this port
-        try:
-            os.system("iptables -t raw -A PREROUTING -p tcp --dport %d -j DROP"
-                      % rsport)
-        except:
-            print("==> Failed to set up firewall rule. Make sure iptables is\n"
-                  "    set up correctly.")
-            return
-        
+        # Attempt to block port using iptables        
+        os.system("iptables -A OUTPUT -p tcp --sport %d --tcp-flags RST RST -j DROP" % rsport)
+
         try:
             # "We tested each server five times."
             for trial in range(num_trials):
-                print("Testing: %s on port %d" % (url, rsport))
                 print("\n*** Trial %d ***" % (trial+1))
+                print("Testing: %s on port %d" % (url, rsport))
                 experiment = ICWTest(url=url)
                 result, icw = experiment.run_test(
                     mss=mss, rsport=rsport, pcap_output=('debug.pcap' if args.debug else None))
@@ -101,8 +109,7 @@ def main():
                 rsport += 1
         finally:
             # Undo firewall rule
-            os.system("iptables -t raw -D PREROUTING -p tcp --dport %d -j DROP"
-                      % rsport)
+            os.system("iptables -D OUTPUT -p tcp --sport %d --tcp-flags RST RST -j DROP" % rsport)
    
     # Process results to produce categories results for Table 2 (Section 4.1)
     categories = [[], [], [], [], []]
@@ -153,7 +160,7 @@ def main():
 
     # Print the reproduction tables from "On Inferring TCP Behavior"
     print_table_2(categories)
-    print_table_3(categories,icws)
+    print_table_3(categories, icws)
 
 if __name__ == "__main__":
     main()
