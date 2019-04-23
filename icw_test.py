@@ -48,17 +48,13 @@ class ICWTest(object):
 
             # Perform HTTP request and collect responses
             responses, request = self._send_request(self.url, syn_ack)
+            self.request = request
             print("Received %d responses" % len(responses))
             if len(responses) == 0:
                 raise ICWTestException(Result.HTTP_TIMEOUT)
 
             # Compute ICW
             icw = self._get_icw(responses)
-
-            # Close connection using a RST packet
-            #TODO: close connection even if you raised an exception
-            print("Closing connection...")
-            self._close_connection(request)
 
             # Write experiment output
             if pcap_output is not None:
@@ -70,6 +66,11 @@ class ICWTest(object):
             print("Test aborted: %s" % e.message)
             # Returns one of the Result options defined below
             return e.message, None
+
+        finally:
+            # Close connection using a RST packet
+            if hasattr(self, "request"):
+                self._close_connection(self.request)
 
     def _open_connection(self, url, rsport):
         """
