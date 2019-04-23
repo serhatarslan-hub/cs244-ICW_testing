@@ -2,6 +2,7 @@ from scapy.all import send, sniff, sr, wrpcap  # send, receive, send/receive, an
 from scapy.all import IP, TCP  # header constructors
 from scapy.all import Padding  # packet layer
 import socket  # for capturing bad host errors
+import os
 FIN = 0x01
 RST = 0x04
 
@@ -35,9 +36,11 @@ class ICWTest(object):
         Returns tuple (result, icw), where icw will be None unless result is Result.SUCCESS.
         """
         self.mss = mss
+        self.rsport = rsport
 
         try:
             # SYN/ACK
+            os.system("iptables -A OUTPUT -p tcp --dport 80 --tcp-flags RST RST -j DROP")
             print("Opening connection...")
             syn_ack = self._open_connection(self.url, rsport)
 
@@ -70,6 +73,7 @@ class ICWTest(object):
         finally:
             # Close connection using a RST packet
             if hasattr(self, "request"):
+                os.system("iptables -D OUTPUT -p tcp --dport 80 --tcp-flags RST RST -j DROP")
                 self._close_connection(self.request)
 
     def _open_connection(self, url, rsport):
@@ -134,8 +138,9 @@ class ICWTest(object):
 
         # Listen for responses. The prn function takes acts on every packet and stop_filter aborts
         # when we see a response from a different source, a retransmission, or a FIN packet.
-        packets = sniff(filter='tcp src port 80', prn=self._update_stream,
-                        timeout=self.ret_timeout, stop_filter=self._stop_stream)
+        f = lambda packet: packet['TCP'].sport == 80 and packet['TCP'].dport == self.rsport# packet['IP'].src == self.ip_of_url
+        packets = sniff(lfilter=f, prn=self._update_stream,
+                        timeout=self.ret_timeout, stop_filter=self._stop_stream, iface='ens4')
 
         return packets, get_rqst
 
@@ -143,6 +148,8 @@ class ICWTest(object):
         """
         Update state helper for _send_request.
         """
+        print("boom")
+        print(packet)
         self.prev_seqno = self.cur_seqno
         self.cur_seqno = packet.seq
 
@@ -155,6 +162,10 @@ class ICWTest(object):
         pad = packet.getlayer(Padding)
         if pad:
             segment_size -= len(pad)
+
+        print("packet stream seeing")
+        print(packet)
+        return False
             
         if packet['IP'].src != self.ip_of_url:
             raise ICWTestException(Result.DIFFERENT_SOURCE)
@@ -164,15 +175,17 @@ class ICWTest(object):
             # TODO: This scenario is retransmission which we want to see,
             # so don't raise execption
             #raise ICWTestException(Result.PACKET_LOSS)
+            print(packet)
+            print("Stopping stream")
             return True
 
         elif flags & FIN or flags & RST:
             raise ICWTestException(Result.FIN_RST_PACKET)
             return True
 
-        elif segment_size > self.mss:
-            raise ICWTestException(Result.LARGE_MSS)
-            return True
+        # elif segment_size > self.mss:
+        #     raise ICWTestException(Result.LARGE_MSS)
+        #     return True
 
         elif segment_size < self.mss \
             and segment_size != 0:
@@ -190,9 +203,8 @@ class ICWTest(object):
         icw = 0
 
         for packet in responses:
-            print("PACKEETTTTTT")
+            print("packet!")
             print(packet)
-
             segment_size = len(packet['TCP'].payload)
             pad = packet.getlayer(Padding)
             if pad:

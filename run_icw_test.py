@@ -4,7 +4,7 @@ import os
 from argparse import ArgumentParser
 from icw_test import ICWTest, Result
 from collections import defaultdict
-
+import socket
 
 def read_url_list(filename):
     # TODO: read IPs instead of URLs?
@@ -75,34 +75,36 @@ def main():
     for url, rsport in zip(urls, ports):
         print("="*32)
         
+        # TODO: look at ret vals
         # Block the OS kernel from processing packets on this port
-        try:
-            os.system("iptables -t raw -A PREROUTING -p tcp --dport %d -j DROP"
-                      % rsport)
-        except:
-            print("==> Failed to set up firewall rule. Make sure iptables is\n"
-                  "    set up correctly.")
-            return
+        # try:
+        # os.system("iptables -t raw -A PREROUTING -p tcp --dport %d -j DROP"
+        #           % rsport)
+        # except:
+        #     print("==> Failed to set up firewall rule. Make sure iptables is\n"
+        #           "    set up correctly.")
+        #     return
         
-        try:
-            # "We tested each server five times."
-            for trial in range(num_trials):
-                print("\n*** Trial %d ***" % (trial+1))
-                print("Testing: %s on port %d" % (url, rsport))
-                experiment = ICWTest(url=url)
-                result, icw = experiment.run_test(
-                    mss=mss, rsport=rsport, pcap_output=('debug.pcap' if args.debug else None))
-                if result == Result.SUCCESS:
-                    print("==> Result: success!\n==> ICW Estimate: %d" % icw)
-                else:
-                    print("==> Result: error: %s" % result)
-                results[url].append(result)
-                icws[url].append(icw)
-                rsport += 1
-        finally:
-            # Undo firewall rule
-            os.system("iptables -t raw -D PREROUTING -p tcp --dport %d -j DROP"
-                      % rsport)
+        # try:
+        # "We tested each server five times."
+        for trial in range(num_trials):
+            print("\n*** Trial %d ***" % (trial+1))
+            print("Testing: %s on port %d" % (url, rsport))
+            experiment = ICWTest(url=url)
+            result, icw = experiment.run_test(
+                mss=mss, rsport=rsport, pcap_output=('debug.pcap' if args.debug else None))
+            if result == Result.SUCCESS:
+                print("==> Result: success!\n==> ICW Estimate: %d" % icw)
+            else:
+                print("==> Result: error: %s" % result)
+            results[url].append(result)
+            icws[url].append(icw)
+            rsport += 1
+        # finally:
+        #     # Undo firewall rule
+        #     os.system("iptables -D OUTPUT -p tcp --dport 80 --tcp-flags RST RST -j DROP")
+        #     # os.system("iptables -t raw -D PREROUTING -p tcp --dport %d -j DROP"
+        #     #           % rsport)
    
     # Process results to produce categories results for Table 2 (Section 4.1)
     categories = [[], [], [], [], []]
