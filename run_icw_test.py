@@ -87,8 +87,8 @@ def main():
         try:
             # "We tested each server five times."
             for trial in range(num_trials):
-                print("Testing: %s on port %d" % (url, rsport))
                 print("\n*** Trial %d ***" % (trial+1))
+                print("Testing: %s on port %d" % (url, rsport))
                 experiment = ICWTest(url=url)
                 result, icw = experiment.run_test(
                     mss=mss, rsport=rsport, pcap_output=('debug.pcap' if args.debug else None))
