@@ -125,7 +125,6 @@ class ICWTest(object):
         # a retransmission, or a FIN or RST packet.
         f = lambda pck: 'TCP' in pck and pck['TCP'].dport == self.rsport
         packets = sniff(lfilter=f,
-                        prn=self._update_stream,
                         timeout=self.ret_timeout,
                         stop_filter=self._stop_stream)
         return packets
@@ -162,41 +161,36 @@ class ICWTest(object):
 
         return packets
 
-    def _update_stream(self, packet):
-        """
-        Update state helper for _send_request.
-        """
-        self.prev_seqno = self.cur_seqno
-        self.cur_seqno = packet.seq
 
     def _stop_stream(self, packet):
         """
         Stop packet filter for _send_request.
         """
+
         flags = packet['TCP'].flags
         segment_size = len(packet['TCP'].payload)
         pad = packet.getlayer(Padding)
         if pad:
             segment_size -= len(pad)
         
-        # TODO
-        # if packet['IP'].src != self.ip_of_url:
-        #     raise ICWTestException(Result.DIFFERENT_SOURCE)
-        #     return True
 
         if packet.seq < self.prev_seqno:
-            # TODO: This scenario is retransmission which we want to see,
-            # so don't raise execption
-            #raise ICWTestException(Result.PACKET_LOSS)
+            return True
+
+        elif packet.seq != self.cur_seqno and self.cur_seqno is not 0:
+            raise ICWTestException(Result.PACKET_LOSS)
             return True
 
         elif flags & FIN or flags & RST:
             raise ICWTestException(Result.FIN_RST_PACKET)
             return True
-
-        # TODO
+        
+        # We decide to allow these cases
         # elif segment_size > self.mss:
         #     raise ICWTestException(Result.LARGE_MSS)
+        #     return True
+        # elif packet['IP'].src != self.ip_of_url:
+        #     raise ICWTestException(Result.DIFFERENT_SOURCE)
         #     return True
 
         elif segment_size < self.mss \
@@ -205,6 +199,9 @@ class ICWTest(object):
             return True
 
         else:
+            # Update state
+            self.cur_seqno = packet.seq + segment_size
+            self.prev_seqno = packet.seq
             return False
 
     def _get_icw(self, responses):
