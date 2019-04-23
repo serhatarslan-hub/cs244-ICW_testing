@@ -110,7 +110,6 @@ class ICWTest(object):
 
         send(rst)
 
-    # TODO: maybe try first the main page, then try this
     def _get_long_str(self):
         """
         Generates a very long arbitrary string with the intent to increase the
