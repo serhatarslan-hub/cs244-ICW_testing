@@ -190,6 +190,9 @@ class ICWTest(object):
         icw = 0
 
         for packet in responses:
+            print("PACKEETTTTTT")
+            print(packet)
+
             segment_size = len(packet['TCP'].payload)
             pad = packet.getlayer(Padding)
             if pad:
