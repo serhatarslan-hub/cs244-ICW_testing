@@ -21,6 +21,7 @@ def print_table_2(categories):
     print("+-----------+----------------+")
     for i, c in enumerate(categories):
         print(("|         %d |" % (i+1))+"{0: >15}".format(len(c))+ " |")
+    print("+------------+----------------+")
     print("|     Total |"+"{0: >15}".format(sum([len(c) for c in categories]))+ " |")
     print("+-----------+----------------+")
 
@@ -39,14 +40,12 @@ def print_table_3(categories, icws):
     print("|          2 |"+"{0: >15}".format(np.sum(icws == 2))+ " |")
     print("|          3 |"+"{0: >15}".format(np.sum(icws == 3))+ " |")
     print("|          4 |"+"{0: >15}".format(np.sum(icws == 4))+ " |")
-    print("|          5 |"+"{0: >15}".format(np.sum(icws == 5))+ " |")
-    print("|          6 |"+"{0: >15}".format(np.sum(icws == 6))+ " |")
-    print("|          7 |"+"{0: >15}".format(np.sum(icws == 7))+ " |")
+    print("|  5 or more |"+"{0: >15}".format(np.sum(icws >= 5))+ " |")
     print("|          8 |"+"{0: >15}".format(np.sum(icws == 8))+ " |")
-    print("|          9 |"+"{0: >15}".format(np.sum(icws == 9))+ " |")
     print("|         10 |"+"{0: >15}".format(np.sum(icws == 10))+ " |")
-    print("|         11 |"+"{0: >15}".format(np.sum(icws == 11))+ " |")
-    print("| 12 or more |"+"{0: >15}".format(np.sum(icws >= 12))+ " |")
+    print("|         16 |"+"{0: >15}".format(np.sum(icws == 16))+ " |")
+    print("|         32 |"+"{0: >15}".format(np.sum(icws == 32))+ " |")
+    print("+------------+----------------+")
     print("|      Total |"+"{0: >15}".format(len(icws))+ " |")
     print("+------------+----------------+")
 
@@ -88,29 +87,22 @@ def main():
 
     for url, rsport in zip(urls, ports):
         print("="*32)
-        
-        # Attempt to block port using iptables        
-        os.system("iptables -A OUTPUT -p tcp --sport %d --tcp-flags RST RST -j DROP" % rsport)
 
-        try:
-            # "We tested each server five times."
-            for trial in range(num_trials):
-                print("\n*** Trial %d ***" % (trial+1))
-                print("Testing: %s on port %d" % (url, rsport))
-                experiment = ICWTest(url=url)
-                result, icw = experiment.run_test(
-                    mss=mss, rsport=rsport, pcap_output=('debug.pcap' if args.debug else None))
-                if result == Result.SUCCESS:
-                    print("==> Result: success!\n==> ICW Estimate: %d" % icw)
-                else:
-                    print("==> Result: error: %s" % result)
-                results[url].append(result)
-                icws[url].append(icw)
-                rsport += 1
-        finally:
-            # Undo firewall rule
-            os.system("iptables -D OUTPUT -p tcp --sport %d --tcp-flags RST RST -j DROP" % rsport)
-   
+        # "We tested each server five times."
+        for trial in range(num_trials):
+            print("\n*** Trial %d ***" % (trial+1))
+            print("Testing: %s on port %d" % (url, rsport))
+            experiment = ICWTest(url=url)
+            result, icw = experiment.run_test(
+                mss=mss, rsport=rsport, pcap_output=('debug.pcap' if args.debug else None))
+            if result == Result.SUCCESS:
+                print("==> Result: success!\n==> ICW Estimate: %d" % icw)
+            else:
+                print("==> Result: error: %s" % result)
+            results[url].append(result)
+            icws[url].append(icw)
+            rsport += 1
+
     # Process results to produce categories results for Table 2 (Section 4.1)
     categories = [[], [], [], [], []]
     for url in urls:

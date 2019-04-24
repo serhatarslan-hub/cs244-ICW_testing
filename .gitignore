@@ -5,6 +5,7 @@
 
 # Sublime
 sftp-config.json
+./vscode/settings.json
 
 # Virtual env
 env/

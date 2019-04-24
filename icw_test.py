@@ -2,6 +2,7 @@ from scapy.all import send, sniff, sr, wrpcap  # send, receive, send/receive, an
 from scapy.all import IP, TCP  # header constructors
 from scapy.all import Padding  # packet layer
 import socket  # for capturing bad host errors
+import os
 from multiprocessing.pool import ThreadPool
 
 FIN = 0x01
@@ -40,6 +41,10 @@ class ICWTest(object):
         self.rsport = rsport
 
         try:
+
+            # Attempt to block port using iptables        
+            os.system("iptables -A OUTPUT -p tcp --sport %d --tcp-flags RST RST -j DROP" % rsport)
+
             # SYN/ACK
             print("Opening connection...")
             syn_ack = self._open_connection(self.url, rsport)
@@ -62,6 +67,9 @@ class ICWTest(object):
             if pcap_output is not None:
                 wrpcap(pcap_output, responses)
 
+            if icw == 0:
+                raise ICWTestException(Result.HTTP_TIMEOUT)
+
             return Result.SUCCESS, icw
 
         except ICWTestException as e:
@@ -70,6 +78,9 @@ class ICWTest(object):
             return e.message, None
 
         finally:
+            # Undo firewall rule
+            os.system("iptables -D OUTPUT -p tcp --sport %d --tcp-flags RST RST -j DROP" % rsport)
+
             # Close connection using a RST packet
             if hasattr(self, "request"):
                 self._close_connection(self.request)
@@ -135,7 +146,7 @@ class ICWTest(object):
         self.prev_seqno = 0
         long_str = self._get_long_str()
 
-        # Construct GET requestr
+        # Construct GET request
         get_str = 'GET /' + long_str + ' HTTP/1.1\r\nHost: ' \
                   + url + '\r\nConnection: Close\r\n\r\n'
         self.request = IP(dst=syn_ack.src) \
@@ -163,7 +174,6 @@ class ICWTest(object):
         """
         Stop packet filter for _send_request.
         """
-
         flags = packet['TCP'].flags
         segment_size = len(packet['TCP'].payload)
         pad = packet.getlayer(Padding)
@@ -213,7 +223,7 @@ class ICWTest(object):
             pad = packet.getlayer(Padding)
             if pad:
                 segment_size -= len(pad)
-            flags = packet['TCP'].flags
+
             if seen_seqno <= packet.seq:
                 seen_seqno = packet.seq
                 total_bytes += segment_size
