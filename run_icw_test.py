@@ -100,6 +100,9 @@ def main():
     results = defaultdict(list)
     icws = defaultdict(list)
 
+    # Attempt to block port using iptables        
+    os.system("iptables -A OUTPUT -p tcp --dport 80 --tcp-flags RST RST -j DROP" )
+
     for url, rsport in zip(urls, ports):
         print("="*32)
 
@@ -122,6 +125,9 @@ def main():
                 results[url].append("internal_error")
                 icws[url].append(None)
             rsport += 1
+
+    # Undo firewall rule
+    os.system("iptables -D OUTPUT -p tcp --dport 80 --tcp-flags RST RST -j DROP")
 
     # Process results to produce categories results for Table 2 (Section 4.1)
     categories = [[], [], [], [], []]

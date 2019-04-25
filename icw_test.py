@@ -42,10 +42,6 @@ class ICWTest(object):
         self.rsport = rsport
 
         try:
-
-            # Attempt to block port using iptables        
-            os.system("iptables -A OUTPUT -p tcp --sport %d --tcp-flags RST RST -j DROP" % rsport)
-
             # SYN/ACK
             print("Opening connection...")
             syn_ack = self._open_connection(self.url, rsport)
@@ -79,9 +75,6 @@ class ICWTest(object):
             return e.message, None
 
         finally:
-            # Undo firewall rule
-            os.system("iptables -D OUTPUT -p tcp --sport %d --tcp-flags RST RST -j DROP" % rsport)
-
             # Close connection using a RST packet
             if hasattr(self, "request"):
                 self._close_connection(self.request)
