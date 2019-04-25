@@ -14,14 +14,14 @@ class ICWTest(object):
     introduced by Padhye & Floyd 2001. Create one per URL.
     """
 
-    def __init__(self, url, page, ret_timeout=5):
+    def __init__(self, url, page=None, ret_timeout=5):
         """
         Args:
             url: the URL to perform the test on
             ret_timeout: retransmission timeout in seconds
         """
         self.url = url
-        self.page = page
+        self.page2request = page
         self.ret_timeout = ret_timeout
         self.cur_seqno = 0
         self.prev_seqno = 0
@@ -121,13 +121,13 @@ class ICWTest(object):
 
         send(rst)
 
-    def _get_long_str(self):
+    def _get_page2request(self):
         """
         Generates a very long arbitrary string with the intent to increase the
         URL length, so that the "URL not found" response is large too.
         """
-        if self.page:
-            return ''
+        if self.page2request is not None:
+            return self.page2request
         else:
             return 'AAAAAaaaaaBBBBBbbbbbChCCCcicccDDcDDddkddEEEEEeeene'*27
 
@@ -148,10 +148,10 @@ class ICWTest(object):
         """
         self.cur_seqno = 0
         self.prev_seqno = 0
-        long_str = self._get_long_str()
+        path2page = self._get_page2request()
 
         # Construct GET request
-        get_str = 'GET /' + long_str + ' HTTP/1.1\r\nHost: ' \
+        get_str = 'GET /' + path2page + ' HTTP/1.1\r\nHost: ' \
                   + url + '\r\nConnection: Close\r\n\r\n'
         self.request = IP(dst=syn_ack.src) \
                        / TCP(dport=80, sport=syn_ack.dport, seq=syn_ack.ack,

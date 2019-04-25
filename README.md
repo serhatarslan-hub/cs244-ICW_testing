@@ -25,10 +25,10 @@ The results are designed to be reproduced on a machine running Ubuntu 14.04. How
     sudo python run_icw_test.py --mss 100 --url_list urls/URLList2001.txt
     ```
 
-To estimate the initial congestion window of an IP or URL of your choice `YOUR_IP`, simply run:
+To estimate the initial congestion window of an IP or URL of your choice `YOUR_IP` and a specific page of your choice `PATH_TO_PAGE`, simply run:
 
 ```
-sudo python run_icw_test.py --host YOUR_IP
+sudo python run_icw_test.py --host YOUR_IP --rqst_page PATH_TO_PAGE
 ```
 
 To perform the tests in a more realistic environment, set `--mss` value to 1460. (Please note that 1460 bytes for MSS will be likely to fail the ICW tests that reproduces the suggested mechanism by [Padhye, Floyd 01])  
@@ -49,9 +49,9 @@ python run_icw_test.py --help
 
 [ to do: brief description of Padhye & Floyd method ]
 
-The paper was published in 2001 which is when the Internet world was so much different that how it is today. With the paper, authors present their TCP Behavior Inference Tool (TBIT) which performs six different tests on publicly available web servers to understand their choice of behavior.  
+The paper [Padhye, Floyd 01]  was published in 2001, when the Internet world was so much different that how it is today, in order to provide a survey that presents the general behavior of TCP implementations. Since TCP had many user-configurable parameters, fairness and stability concerns were tried to be addressed via the obtained diverity vs. standardization results. Such results could help us understand the current big picture of the Internet which then could be interpreted when designing simulations or even new systems.  
 
-We implement this method in python using scapy, a library for constructing, sending and receiving raw IP-layer packets. We rely on the common Linux tool `iptables` to set up firewall rules for our test. 
+With the paper, authors present their TCP Behavior Inference Tool (TBIT) which performs six different tests on publicly available web servers to understand their choice of behavior. Those tests can be listed as initial value of congestion window (ICW), congestion control algorithm (CCA), conformant congestion control (CCC), selective acknowledgements (SACK), time wait duration, and response to ECN. Our reproduction focuses solely on the ICW tests which aim to estimate the initial congestion window size of web servers throughout the Internet.  
 
 ## Reproduction Philosophy
 
@@ -90,4 +90,20 @@ Although the large URL trick doesn't ensure a large response, during our prelimi
 
 - **OS port blocking.** When using a tool like Scapy to send out raw L3 packets without sockets, the OS kernel closes any incoming connection with a RST packet before we even have a chance to process it. To avoid this, we had to set up a firewall rule before we start sending out any packets. We went with a blanket rule to avoid sending any RSTs on the source port:
  ```iptables -D OUTPUT -p tcp --sport %d --tcp-flags RST RST -j DROP```
-where `%d` is our current evaluation port (unique for each URL and trial). After each test, we revert the firewall rule and close the connection by manually sending RST packet with Scapy. Please note that the provided firewall rules are for Linux operating system. Using other operating systems for running our implementation may still encounter the given port blocking problem.
+where `%d` is our current evaluation port (unique for each URL and trial). After each test, we revert the firewall rule and close the connection by manually sending RST packet with Scapy. Please note that the provided firewall rules are for Linux operating system. Using other operating systems for running our implementation may still encounter the given port blocking problem.  
+
+- **Default Hypervisor Configurations** During our experiments, we have realized that our hypervisor (Oracle VM Virtualbox) changed the MSS option in the outgoing packets to 1460 bytes even when we manually set it to different values. This was mainly because of the default behavior of the hypervisor itself as reported in https://www.virtualbox.org/ticket/15256 bug report. Since this issue would prevent obtaining the desired behavior from the web servers, the following steps may be helpful to overcome the problem (if encountered):  
+
+    1. Use the bridged networking option for Virtualbox (Go to Machine > Settings > Network > Adapter 1 and set it to "Bridged")  
+
+    2. Set DHCP for the connected interface statically and steal the IP information of the host interface to connect the VM interface to the Internet. Namely, edit /etc/network/interfaces on the VM.  
+
+    ```
+    iface eth1 inet static  
+    	address [host ip]
+	    gateway [host gateway]
+	    broadcast [host broadcast]
+	    dns-nameservers 8.8.8.8
+    ```  
+
+    You may need to run `sudo ifdown eth1` and `sudo ifup eth1` after this or reboot the VM.
