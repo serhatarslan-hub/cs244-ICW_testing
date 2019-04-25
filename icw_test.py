@@ -14,13 +14,14 @@ class ICWTest(object):
     introduced by Padhye & Floyd 2001. Create one per URL.
     """
 
-    def __init__(self, url, ret_timeout=5):
+    def __init__(self, url, page, ret_timeout=5):
         """
         Args:
             url: the URL to perform the test on
             ret_timeout: retransmission timeout in seconds
         """
         self.url = url
+        self.page = page
         self.ret_timeout = ret_timeout
         self.cur_seqno = 0
         self.prev_seqno = 0
@@ -125,7 +126,10 @@ class ICWTest(object):
         Generates a very long arbitrary string with the intent to increase the
         URL length, so that the "URL not found" response is large too.
         """
-        return 'AAAAAaaaaaBBBBBbbbbbChCCCcicccDDcDDddkddEEEEEeeene'*27
+        if self.page:
+            return ''
+        else:
+            return 'AAAAAaaaaaBBBBBbbbbbChCCCcicccDDcDDddkddEEEEEeeene'*27
 
     def _start_sniff(self):
         # Listen for responses. The prn function takes acts on every packet and

@@ -56,6 +56,10 @@ def main():
                         help="File that contains the list of URLs to measure.")
     parser.add_argument('--host', type=str,
                         help="Host URL or IP address to run the test on")
+    parser.add_argument('--mss', type=int, required=True,
+                        help="MSS size (in bytes) to run the tests with")
+    parser.add_argument('--main_page', action='store_true', default=False,
+                        help="If specified, main page is requested from the URL")
     parser.add_argument('--debug', action='store_true', default=False,
                         help="If specified, prints the last URL trace to debug.pcap.")
     args = parser.parse_args()
@@ -69,8 +73,9 @@ def main():
         print("One of --url_list and --host must be specified. (See -h for help.)")
         return
 
-    # "The MSS was set to 100 bytes."
-    mss = 100
+    # In the original paper, "The MSS was set to 100 bytes."
+    mss = args.mss
+    # Number of trials per URL
     num_trials = 5
 
     # Loop over ports from 2048 to 65500 in a random order
@@ -92,7 +97,7 @@ def main():
         for trial in range(num_trials):
             print("\n*** Trial %d ***" % (trial+1))
             print("Testing: %s on port %d" % (url, rsport))
-            experiment = ICWTest(url=url)
+            experiment = ICWTest(url=url,page=args.main_page)
             result, icw = experiment.run_test(
                 mss=mss, rsport=rsport, pcap_output=('debug.pcap' if args.debug else None))
             if result == Result.SUCCESS:
