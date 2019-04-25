@@ -104,9 +104,9 @@ where `%d` is our current evaluation port (unique for each URL and trial). After
     ```
     iface eth1 inet static  
     	address [host ip]  
-        gateway [host gateway]  
-        broadcast [host broadcast]  
-        dns-nameservers 8.8.8.8
+            gateway [host gateway]  
+            broadcast [host broadcast]  
+            dns-nameservers 8.8.8.8
     ```  
 
     You may need to run `sudo ifdown eth1` and `sudo ifup eth1` after this or reboot the VM.
