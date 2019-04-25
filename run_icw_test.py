@@ -60,7 +60,7 @@ def main():
                         help="MSS size (in bytes) to run the tests with")
     parser.add_argument('--main_page', action='store_true', default=False,
                         help="If specified, main page is requested from the URL.")
-    parser.add_argument('--rqst_page', type=str, default='',
+    parser.add_argument('--rqst_page', type=str, default=None,
                         help="Request for the specified page during HTTP GET.")
     parser.add_argument('--debug', action='store_true', default=False,
                         help="If specified, prints the last URL trace to debug.pcap.")
@@ -78,12 +78,10 @@ def main():
     if args.rqst_page is not '' and args.main_page:
         print("Only one of --rqst_page and --main_page must be specified. (See -h for help.)")
         return
-    elif args.rqst_page is not '':
-        page2request = args.rqst_page
-    elif args.main_page:
+    if args.main_page:
         page2request = ''
     else:
-        page2request = None
+        page2request = args.rqst_page
 
     # In the original paper, "The MSS was set to 100 bytes."
     mss = args.mss
