@@ -19,11 +19,12 @@ The results are designed to be reproduced on a machine running Ubuntu 14.04. How
     sudo pip install -r requirements.txt
     ```
 
-3. Reproduce the results (this will take some time):
+3. Reproduce the results with a modern list of URLS* (this will take some time):
 
     ```
-    sudo python run_icw_test.py --mss 100 --url_list urls/URLList2001.txt
-    ```
+    sudo python run_icw_test.py --mss 100 --url_list urls/modernURLs.txt
+    ```  
+    *Please note that we are using a modern list of URLs which is a subset of the extensive list (53 Million Addresses) provided by the 2014 scans of https://scans.io project #25499 (IPv4 HTTP Scans).
 
 To estimate the initial congestion window of an IP or URL of your choice `YOUR_IP` and a specific page of your choice `PATH_TO_PAGE`, simply run:
 
@@ -36,7 +37,7 @@ To perform the tests in a more realistic environment, set `--mss` value to 1460.
 Our tests request for a non-existing very long page from every URL. This is implemented to make sure response content is long enough to fill the ICW as suggested by [Rüth, Bormann, Hohlfeld 17]. To request for the main page of the URL, simply pass `--main_page` argument while running the tester.  
 
 ```
-sudo python run_icw_test.py --mss 100 --url_list urls/URLList2001.txt --main_page
+sudo python run_icw_test.py --mss 100 --url_list urls/modernURLs.txt --main_page
 ```  
 
 For more options, see:
