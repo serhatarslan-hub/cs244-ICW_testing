@@ -129,7 +129,7 @@ class ICWTest(object):
         if self.page2request is not None:
             return self.page2request
         else:
-            return 'AAAAAaaaaaBBBBBbbbbbChCCCcicccDDcDDddkddEEEEEeeene'*27
+            return 'AAAAAaaaaaBBBBBbbbbbChCCCcicccDDcDDddkddEEEEEeeene'*26
 
     def _start_sniff(self):
         # Listen for responses. The prn function takes acts on every packet and
