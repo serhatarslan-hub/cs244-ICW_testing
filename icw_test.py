@@ -163,6 +163,8 @@ class ICWTest(object):
         # Send request
         send(self.request)
         packets = async.get()
+        pool.close()
+        pool.join()
 
         return packets
 
