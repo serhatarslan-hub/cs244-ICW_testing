@@ -3,6 +3,7 @@
 *.pyc
 *~
 *.gz
+*.zip
 
 # Sublime
 sftp-config.json
