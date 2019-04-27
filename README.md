@@ -22,7 +22,7 @@ The results are designed to be reproduced on a machine running Ubuntu 14.04. How
 3. Reproduce the results with a modern list of URLS* (this will take some time):
 
     ```
-    sudo python run_icw_test.py --mss 100 --url_list urls/QuantasPopularURLs.txt
+    sudo python run_icw_test.py --mss 64 --url_list urls/QuantasPopularURLs.txt
     ```  
     *Please note that we are using the list of most popular 20 thousand URLS provided by  https://www.quantcast.com/top-sites/.
 

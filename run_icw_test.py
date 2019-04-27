@@ -56,7 +56,7 @@ def main():
                         help="File that contains the list of URLs to measure.")
     parser.add_argument('--host', type=str,
                         help="Host URL or IP address to run the test on")
-    parser.add_argument('--mss', type=int, default=100,
+    parser.add_argument('--mss', type=int, default=64,
                         help="MSS size (in bytes) to run the tests with")
     parser.add_argument('--main_page', action='store_true', default=False,
                         help="If specified, main page is requested from the URL.")
@@ -75,7 +75,7 @@ def main():
         print("One of --url_list and --host must be specified. (See -h for help.)")
         return
 
-    if args.rqst_page is not '' and args.main_page:
+    if args.rqst_page is not None and args.main_page:
         print("Only one of --rqst_page and --main_page must be specified. (See -h for help.)")
         return
     if args.main_page:
