@@ -14,7 +14,7 @@ class ICWTest(object):
     introduced by Padhye & Floyd 2001. Create one per URL.
     """
 
-    def __init__(self, url, page=None, ret_timeout=2):
+    def __init__(self, url, page=None, ret_timeout=4):
         """
         Args:
             url: the URL to perform the test on
