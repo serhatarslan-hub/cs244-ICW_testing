@@ -62,6 +62,10 @@ def main():
                         help="If specified, main page is requested from the URL.")
     parser.add_argument('--rqst_page', type=str, default=None,
                         help="Request for the specified page during HTTP GET.")
+    parser.add_argument('--k', type=int, default=None,
+                        help="Run over the url list in folds. Only execute fold k.")
+    parser.add_argument('--kfolds', type=int, default=None,
+                        help="Run over the url list in folds. Specify total folds.")
     parser.add_argument('--debug', action='store_true', default=False,
                         help="If specified, prints the last URL trace to debug.pcap.")
     args = parser.parse_args()
@@ -82,6 +86,13 @@ def main():
         page2request = ''
     else:
         page2request = args.rqst_page
+
+    if args.kfolds is not None and args.k is not None:
+        partitions = np.array_split(urls, args.kfolds)
+        urls = partitions[args.k]
+    elif args.kfolds is not None or args.k is not None:
+        print("--k and --kfolds must be used together. (See -h for help.)")
+        return
 
     # In the original paper, "The MSS was set to 100 bytes."
     mss = args.mss
