@@ -1,0 +1,10 @@
+sudo python run_icw_test.py --mss 64 --url_list urls/QuantcastPopularURLs.txt --kfolds 10 --k 0
+sudo python run_icw_test.py --mss 64 --url_list urls/QuantcastPopularURLs.txt --kfolds 10 --k 1
+sudo python run_icw_test.py --mss 64 --url_list urls/QuantcastPopularURLs.txt --kfolds 10 --k 2
+sudo python run_icw_test.py --mss 64 --url_list urls/QuantcastPopularURLs.txt --kfolds 10 --k 3
+sudo python run_icw_test.py --mss 64 --url_list urls/QuantcastPopularURLs.txt --kfolds 10 --k 4
+sudo python run_icw_test.py --mss 64 --url_list urls/QuantcastPopularURLs.txt --kfolds 10 --k 5
+sudo python run_icw_test.py --mss 64 --url_list urls/QuantcastPopularURLs.txt --kfolds 10 --k 6
+sudo python run_icw_test.py --mss 64 --url_list urls/QuantcastPopularURLs.txt --kfolds 10 --k 7
+sudo python run_icw_test.py --mss 64 --url_list urls/QuantcastPopularURLs.txt --kfolds 10 --k 8
+sudo python run_icw_test.py --mss 64 --url_list urls/QuantcastPopularURLs.txt --kfolds 10 --k 9
