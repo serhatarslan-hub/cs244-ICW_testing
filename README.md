@@ -1,3 +1,6 @@
+[This report is submitted as the README of our public repository [on Github](https://github.com/serhatarslan-hub/cs244-ICW_testing).]
+
+
 # Measuring the Initial Congestion Window of Popular Webservers  
 
 <center> *Serhat Arslan (sarslan@stanford.edu), Catalin Voss (catalin@cs.stanford.edu)* </center>
@@ -137,7 +140,7 @@ Although the large URL trick doesn't guarantee a large response, during our prel
 
 ## Results  
 
-One of the main issues with reproducing the results of [[Padhye & Floyd '01]](https://www.microsoft.com/en-us/research/wp-content/uploads/2017/01/tbit.pdf) was testing the same URLs they tested two decades ago. On [TBIT website](https://www.icir.org/tbit/), we have found the URL list they have used. However, as one would expect, most the URLs on this list would return DNS errors, meaning they no long exist. In order to prevent this, we decided to use the list of most popular websites for USA, provided by [Quantcast](https://www.quantcast.com/top-sites/). The list included couple of hundred thousand URLs, but we capped the list with 20 thousand most popular websites to make sure our tests return in feasible amount of time. Every URL is tested 5 times, adding up to 100 thousand tests. The categorization results of the tests are shown below as the reproduction of table 2 in the original paper:  
+The categorization results of the tests are shown below as the reproduction of table 2 in the original paper:  
 
 <center> Table 2: ICW: Server categories </center>  
 
@@ -202,6 +205,8 @@ In order to see the complete function of ICW, we could test the same URL with di
 
 ## Complications and Limitations
 
+- **Choice of URLs.** One of the main issues with reproducing the results of [[Padhye & Floyd '01]](https://www.microsoft.com/en-us/research/wp-content/uploads/2017/01/tbit.pdf) was using the same URLs that were tested two decades ago. We first attempted to use the original URL list posted on the [TBIT website](https://www.icir.org/tbit/). However, as one would expect, most the URLs on this list would return DNS errors, since they no longer exist. In order to prevent this, we decided to use the list of most popular websites in the United States provided by [Quantcast](https://www.quantcast.com/top-sites/). We capped the list to the 20,000 most popular websites to make sure our tests return in feasible amount of time. Every URL was tested 5 times, adding up to 100,000 thousand tests. One limitation with using modern URLs is that many 21st century webservers now enforce HTTPS and some will drop HTTP connections entirely.
+
 - **Use of Scapy.** In using Scapy for our replication, we found that the tool can be slow at setting up sniffers, especially when running in virtualized environments. The default packet-receiving function `sniff()` requires us to use the slower `lfilter()` method for filtering packets in virtualized envirionments. With that setting, we consistently observed Scapy missing the first few packets before its sniffer was provisioned right after sending our GET request. We especially observed this case when we worked on a VM provisioned in an extremely high performance data center and queried URLs like www.google.com, likely only a few fiber hops away in the same datacenter (we tested this on Google Cloud). To circumvent this issue, we had to set up the sniffer asynchronously and ensure it was set up by the time we sent our first GET packet out. 
 
 - **OS port blocking.** When using a tool like Scapy to send out raw L3 packets without sockets, the OS kernel closes any incoming connection with a RST packet before we even have a chance to process it. To avoid this, we had to set up a firewall rule before we start sending out any packets. We went with a blanket rule to avoid sending any RSTs on the source port:
@@ -224,4 +229,4 @@ where `%d` is our current evaluation port (unique for each URL and trial). After
 
 	    You may need to run `sudo ifdown eth1` and `sudo ifup eth1` after this or reboot the VM.
 
-- **Batched Execution.** Scapy's way of handling connections involves opening up a new file for every connection to write information about the incoming packets. However, Scapy fails to close those files before the python process finishes. Since our tester opens many connections in one run, we encountered `[Errno 24] Too many open files` errors after some number of connections. This error prevented us to collect information for new connections. As a solution, we have decided to run the tests with batched, so that less amount of connections would be established in each python process. We have run the tests in 15 batches each having 1257 URLs to test. The batched execution steps are aggregated in `reproduce_results_batched.sh` script. (Please note that the batched results shall be summed up manually to get the aggregate result.)
+- **Batched Execution.** Scapy's way of handling connections involves opening up a new file for every connection to write information about the incoming packets. However, in some versions and on some OS's, Scapy fails to close those files before the python process finishes and leaks file pointers. Since our tester opens many connections in one run, we encountered `[Errno 24] Too many open files` errors after some number of connections. This error prevented us to collect information for new connections. As a workaround, we provide a way to run the tests in batches. We have run the tests in 15 batches each with 1257 URLs to test. The batched execution steps are aggregated detailed in the `reproduce_results_batched.sh` script.
