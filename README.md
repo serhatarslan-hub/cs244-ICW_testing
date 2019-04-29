@@ -19,12 +19,12 @@ The results are designed to be reproduced on a machine running Ubuntu 14.04. How
     sudo pip install -r requirements.txt
     ```
 
-3. Reproduce the results with a modern list of URLS* (this will take some time):
+3. Reproduce the results with a modern list of URLS (this will take some time):
 
     ```
     sudo python run_icw_test.py --mss 64 --url_list urls/QuantcastPopularURLs.txt
     ```  
-    *Please note that we are using the list of most popular 20 thousand URLS provided by  https://www.quantcast.com/top-sites/.
+    Please note that we are using the list of most popular 20 thousand URLS provided by  https://www.quantcast.com/top-sites/.
 
 To estimate the initial congestion window of an IP or URL of your choice `YOUR_IP` and a specific page of your choice `PATH_TO_PAGE`, simply run:
 
