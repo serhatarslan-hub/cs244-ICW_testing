@@ -1,4 +1,6 @@
-# Measuring the Initial Congestion Window of Popular Webservers
+# Measuring the Initial Congestion Window of Popular Webservers  
+
+Authors: Serhat Arslan (sarslan@stanford.edu), Catalin Voss (catalin@cs.stanford.edu)
 
 In this repository, we attempt to reproduce measurements of the initial congestion window (ICW) size used by popular web servers. We aim to replicate the size measurements presented in the 2001 paper "On Inferring TCP Behavior" by Jitendra Padhye and Sally Floyd on the modern internet.
 
@@ -119,7 +121,7 @@ While Padhye & Floyd's TBIT tool errored out whenever the server responded with 
 
 We measure ICW consistently with the unit definition of `cwnd`, in bytes. As long as the ICW is filled up, the total amount of payload sent will be equal to `cwnd`. If packet loss occurs along the way, the received payload size may be smaller than what is sent, but our implementation follows the sequence numbers of the received packets and terminates the test when a loss is detected. We also detect whether the response has finished before filling up the `cwnd` by catching any `FIN`, `RST` packets and/or retransmissions. In order to make sure `FIN` packets are sent at the end of responses, we use the `Connection: Close` attribute in our `GET` requests.
 
-However, as we alluded to, it is reasonable to ask whether running such a test with an `MSS` of 64 or 100 can reasonably return meaningful results on the modern internet, when common `MSS` values are far from this. To address this question, we perform our test on two websites with known large objects (`stanford.edu` and `youtube.com`) and report `ICW` results for different `MSS` sizes.
+A discussion on the meaning of a test with a small MSS vs more practical values is given [below](#discussion). We acknowledge the fact that our tests with limited number of MSS trials will not reveal the complete function that is used by the server to calculate its ICW.
 
 ### Finding large objects  
 
@@ -133,13 +135,9 @@ This almost always ensures either a `301 Moved Permanently` or a `404 Not Found`
 
 Although the large URL trick doesn't guarantee a large response, during our preliminary tests we realized that most of the websites had relatively small main page content. Our tool can be re-run to request the content of specific large objects.
 
-## Results
+## Results  
 
-Below we present our results for the Padhye & Floyd reproduction and our experiments with a larger `MSS`.
-
-### Padhye & Floyd Reproduction
-
-One of the main issues with reproducing the results of [[Padhye, Floyd 01]](https://www.microsoft.com/en-us/research/wp-content/uploads/2017/01/tbit.pdf) was testing the same URLs they tested two decades ago. On [TBIT website](https://www.icir.org/tbit/), we have found the URL list they have used. However, as one would expect, most the URLs on this list would return DNS errors, meaning they no long exist. In order to prevent this, we decided to use the list of most popular websites for USA provided by [Quantcast](https://www.quantcast.com/top-sites/). The list included couple of hundred thousand URLs, but we capped the list with 20 most popular websites to make sure our tests return in feasible amount of time. Every URL is tested 5 times, adding up to 100 thousand tests. The categorization results of the tests are shown below as the reproduction of table 2 in the original paper:  
+One of the main issues with reproducing the results of [[Padhye, Floyd 01]](https://www.microsoft.com/en-us/research/wp-content/uploads/2017/01/tbit.pdf) was testing the same URLs they tested two decades ago. On [TBIT website](https://www.icir.org/tbit/), we have found the URL list they have used. However, as one would expect, most the URLs on this list would return DNS errors, meaning they no long exist. In order to prevent this, we decided to use the list of most popular websites for USA, provided by [Quantcast](https://www.quantcast.com/top-sites/). The list included couple of hundred thousand URLs, but we capped the list with 20 thousand most popular websites to make sure our tests return in feasible amount of time. Every URL is tested 5 times, adding up to 100 thousand tests. The categorization results of the tests are shown below as the reproduction of table 2 in the original paper:  
 
 <center> Table 2: ICW: Server categories </center>  
 
@@ -147,18 +145,20 @@ One of the main issues with reproducing the results of [[Padhye, Floyd 01]](http
 	
 | Category  | Servers |
 |:---------:|:-------:|
-|         1 |    2776 |
-|         2 |    2042 |
-|         3 |      68 |
-|         4 |       8 |
-|         5 |    8932 |
-|     Total |   13826 |  
+|         1 |    3513 |
+|         2 |    2721 |
+|         3 |      91 |
+|         4 |      10 |
+|         5 |   12515 |
+|     Total |   18850 |  
 
 </center>  
 
-[ to do : Explain numbers ]  
+Unfortunately about two thirds our URL tests failed due to http timeouts, packet losses during transmission, and receiving FIN or RST packets before any retransmission. Especially receiving FIN or RST packets was the most common way of failing a test. The main reason for this issue is because we were sending a request for a non-existing page with a very long name, and some web-sites were not including the name of the page in their responses, so the responses would be shorter then the ICW size. Nevertheless, requesting for the main page would not ensure a long response anyway. (Most URLs use HTTPS, so requesting for the main page from port 80 returns 'Moved Permenantly' error)  
 
-Since category 1 servers are consistent with their results, we have also reproduced table 3 of the original paper from further analysing this category. The original table shows ICW size values for 1 to 4 and adds a row for ICW values that are 5 or more. As we mentioned earlier, a table would now precisely show the ICW size distribution in the modern Internet as most of the servers have adopted larger ICW values. To see the ICW distribution relatively more clearly, we have added rows for ICW sizes of 8, 10, 16, and 32. (One could add more rows, but our results indicate that ICW values are concentrated more on 10 and 16 packets.) The collective results of our tests are presented below:  
+Satisfyingly, we have obtained more than 3500 successfull results which would help us to see the general distribution of ICW size throughout the Internet. The distribution is presented in table 3 below. Please note that the number of category 2 URLs is about 3 thousand which is compatible with the number of category 1 URLs. Category 2 URLs denote that although we could get successfull results from the URL, not all of the tests returned the same result. Packet loss or HTTP timeouts may cause this behavior. More investigation on those URLs could improve the number of category 1 URLs.
+
+Since category 1 servers are consistent with their results, we have also reproduced table 3 of the original paper from further analysing this category. The original table shows ICW size values for 1 to 4 and adds a row for ICW values that are 5 or more. As we mentioned earlier, a table would not precisely show the ICW size distribution in the modern Internet as most of the servers have adopted larger ICW values. To see the ICW distribution relatively more clearly, we have added rows for ICW sizes of 8, 10, 16, and 32. (One could add more rows, but our results indicate that ICW values are concentrated more on 10 and 16 packets.) The collective results of our tests are presented below:  
 
 <center> Table 3: ICW: Summary results </center>  
 
@@ -167,25 +167,22 @@ Since category 1 servers are consistent with their results, we have also reprodu
 | ICW size   | Servers   |
 |:----------:|:---------:|
 |          1 |         0 |
-|          2 |         2 |
-|          3 |         5 |
-|          4 |         4 |
-|  5 or more |      2765 |  
-|      Total |      2776 |
-|          8 |        11 |
-|         10 |       845 |
-|         16 |       841 |
-|         32 |         4 |
+|          2 |         4 |
+|          3 |        10 |
+|          4 |         6 |
+|  5 or more |      3493 |  
+|      Total |      3513 |  
+
+| Special ICW Sizes | Servers   |
+|:-----------------:|:---------:|
+|                 8 |        17 |
+|                10 |      1119 |
+|                16 |       947 |
+|                32 |         5 |
   
 </center>
 
-[ to do : Explain numbers ]  
-
-### Larger `MSS`  
-
-Recall that we have given the ICW formula proposed by [RFC 3390](https://tools.ietf.org/html/rfc3390) in [Brief Description](#brief-description). If the given formula was used in the tested servers, we would get mostly ICW size of 4 with a small MSS such as 64 bytes. However, the results we present in the previous sections shows that most of the modern web servers use larger ICW size for small MSS values. In order to see an examplary behavior for a more realistic MSS size, we have tested www.stanford.com and www.youtube.com with 1460 bytes for MSS.
-
-[ to do ]
+Our reproduction differs from the original paper significantly. Most web-servers used to choose an ICW size of 2 packets in 2001 experiments. However, as of 2019, the common trend for ICW size seems to be much larger. Namely ICW size of 10 or 16 MSS size packets are choosen as the most popular value. The choice of 10 MSS size packets is consistent with the proposed RFC from 2013. However it only makes approximately 30% percent of the tested URLs. **The popularity of ICW sizes such as 16 or 32 show that the liberal spirit of Internet motivates developers to deploy off-standard solutions to get tailored improvement for their applications.**   
 
 ## Discussion  
 
