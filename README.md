@@ -2,7 +2,7 @@
 
 <center> *Serhat Arslan (sarslan@stanford.edu), Catalin Voss (catalin@cs.stanford.edu)* </center>
 
-In this repository, we attempt to reproduce measurements of the initial congestion window (ICW) size used by popular web servers. We aim to replicate the size measurements presented in the 2001 paper "On Inferring TCP Behavior" by Jitendra Padhye and Sally Floyd on the modern internet.
+In this repository, we attempt to reproduce measurements of the initial congestion window (ICW) size used by popular web servers. We aim to replicate the size measurements presented in the 2001 paper "On Inferring TCP Behavior" by Jitendra Padhye and Sally Floyd on the modern Internet.
 
 ## Installation and Reproduction Steps
 
@@ -50,21 +50,21 @@ python run_icw_test.py --help
 
 ## Brief Description  
 
-Padhye & Floyd published their original ICW test in 2001 with an attempt to survey the general behavior of TCP implementations of the Internet at the time. Historically, TCP implementations differed widely, so it remains as important today as it was in 2001 to get a picture on the diversity of parameters used on the Internet to ensure fairness and stability. Understanding the big picture of the Internet can then help in determining standards, simulations, and new applications.
+Padhye & Floyd published their original ICW test in 2001 in an attempt to survey the general behavior of TCP implementations of the Internet at the time. Historically, TCP implementations differed widely, so it remains as important today as it was in 2001 to get a picture on the diversity of parameters used on the Internet to ensure fairness and stability of the network. Understanding the big picture of the Internet can then help in determining standards, simulations, and new applications.
 
 Padhye & Floyd's initial ICW test was presented with the release of the TCP Behavior Inference Tool (TBIT), which performs six different tests on publicly available web servers to understand their TCP behavior. The tests covered the ICW value, the choice of congestion control algorithm (CCA), conformant congestion control (CCC), implementation of selective acknowledgements (SACK), TCP timeout duration, and responses to ECN. In this report, we only attempt to reproduce the ICW results for popular web servers.
 
 The congestion window size is one of two metrics that determine how much data can be sent before any acknowledgement of arrival is received. Popular congestion control algorithms start from a relatively small value of congestion window size and slowly increase until congestion is perceived. The ICW determines how much data to be sent without any feedback on current congestion on the network. As a consequence, the choice of ICW is a trade-off between under-utilizing the available capacity and putting too much stress on the network.  
 
-When the original paper was published, [RFC 2414](https://tools.ietf.org/html/rfc2414) was suggested by IETF to determine the ICW size. The RFC would exhibit the following rule for ICW calculation:  
+When the original paper was published, IETF suggested [RFC 2414](https://tools.ietf.org/html/rfc2414) to determine the ICW size according to the following calculation:
 
 ```  
-        If (MSS <= 1095 bytes)  
-            then win <= 4 * MSS;  
-        If (1095 bytes < MSS < 2190 bytes)  
-            then win <= 4380;  
-        If (2190 bytes <= MSS)  
-            then win <= 2 * MSS;
+If (MSS <= 1095 bytes)  
+    then win <= 4 * MSS;  
+If (1095 bytes < MSS < 2190 bytes)  
+    then win <= 4380;  
+If (2190 bytes <= MSS)  
+    then win <= 2 * MSS;
 ```
 
 In 2002, [RFC 3390](https://tools.ietf.org/html/rfc3390) "Increasing TCP's Initial Window" set a standard for determining ICW for implementors of TCP congestion control. The ICW was to be set as
@@ -91,11 +91,11 @@ The ICW test proposed by Padhye & Floyd proceeds as follows:
 - Once a timeout is detected by the server but after filling the initial congestion window, it will begin retransmitting the previously sent packets.
 - The tester then interprets this retransmission as the conclusion of the ICW and infers the ICW size as the total number of bytes received up to this point divided by the `MSS`.
 
-In order to infer the ICW size, we need to ensure that the web server will send at least `ICW * MSS` amount of data. Finding a large file on every web server is difficult so Padhye & Floyd attempt to solve this problem by keeping the `MSS` small (the paper uses a value of 100 bytes). This is problematic because the most common MSS size on today's internet is 1460 bytes. We discuss this consideration [below](#discussion).
+In order to infer the ICW size, we need to ensure that the web server will send at least `ICW * MSS` amount of data. Finding a large file on every web server is difficult so Padhye & Floyd attempt to solve this problem by keeping the `MSS` small (the paper uses a value of 100 bytes). This is problematic because the most common MSS size on today's Internet is 1460 bytes. We discuss this consideration [below](#discussion).
 
 ## Reproduction Philosophy
 
-Our code aims to reproduce only the initial congestion window size measurements of Padhye & Floyd by reproducing Tables 2 and 3 in the original paper. To make our results comparable, we aimed to base our reproduction as closely as possible on the written description in Padhye & Floyd. However, some small modifications were necessary to make this reproduction possible. We then address issues with this reproduction on the modern internet, specifically the issue of an artificially small `MSS` and describe experiments for reproducing the test with a larger `MSS` on the modern internet.
+Our code aims to reproduce only the initial congestion window size measurements of Padhye & Floyd by reproducing Tables 2 and 3 in the original paper. To make our results comparable, we aimed to base our reproduction as closely as possible on the written description in Padhye & Floyd. However, some small modifications were necessary to make this reproduction possible. We then address issues with this reproduction on the modern Internet, specifically the issue of an artificially small `MSS` and describe experiments for reproducing the test with a larger `MSS` on the modern Internet.
 
 We did not use TBIT (the tool that authors used for their tests) during our reproduction due to compatibility issues. TBIT was implemented for the BSD operating system 19 years ago (source code available at www.aciri.org/tbit/). Although a patch for Linux compatibility was published in 2004, there remain several compatibility issues with modern Linux distributions. We implemented our own initial congestion window size tester in Python 2.7 using the Scapy packet manipulation module. We chose Scapy for its simplicity and flexibility for packet by packet content manipulation. We discuss complications with this choice [below](#Complications-and-Limitations).
 
