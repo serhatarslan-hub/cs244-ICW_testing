@@ -80,9 +80,33 @@ Our code aims to reproduce only the initial congestion window size measurements 
 
 We did not use TBIT (the tool that authors used for their tests) during our reproduction due to compatibility issues. TBIT was implemented for the BSD operating system 19 years ago (source code available at www.aciri.org/tbit/). Although a patch for Linux competibility was published in 2004, there remain several compatibility issues with modern Linux distributions. We implemented our own initial congestion window size tester in Python 2.7 using the Scapy packet manipulation module. We chose Scapy for its simplicity and flexibility for packet by packet content manipulation. We discuss complications with this choice below.
 
-During our preliminary tests, we realized that relatively large group of the web servers have adopted an ICW size of >> 5 `MSS` sized packets. As a result, we extended the table 3 presented on the paper and with commonly encountered ICW configurations.
+During our preliminary tests, we realized that relatively large group of the web servers have adopted an ICW size of >> 5 `MSS` sized packets. In 2001, this was a rare occurence, so Padhye & Floyd only list sizes up to 5. We extended the table 3 presented on the paper and with commonly encountered ICW configurations.
 
-Although we did not directly use TBIT, the testing methodology of our implementation follows the descriptions given in the Padhye & Floyd paper step by step. The categorization of web servers follows that of the paper exactly, and error cases are implemented as desccribed in the paper with small  exceptions described below.
+Although we did not directly use TBIT, the testing methodology of our implementation follows the descriptions given in the Padhye & Floyd paper step by step. The categorization of web servers follows that of the paper exactly:
+
+1. "If at least three tests return results, and all the results are
+the same, the server is added to category 1. We have the
+highest confidence in these results, as they have been shown
+to be repeatable. We report summary results only for servers
+belonging to this category."
+2. "If at least three tests return results, but not all the results are
+ the same, the server is added to category 2. The differing results
+ could be due to several factors, such as confusing packet
+ drop patterns (as discussed in Section 2), which are further
+ discussed in Section 5. We would like to minimize the number of
+ servers that fall in this category."
+3. "If one or two tests return results, and all the results are the
+ same, the server is added to category 3. Further tests are
+ needed to categorize the TCP behavior of this server."
+4. "If one or two tests return results, and not all the results are
+ the same, the server is added to category 4. We would like to
+ minimize the number of servers that fall in this category as
+ well."
+5. "If none of the five tests returned a result, this server was
+ added to category 5. These servers need to be investigated
+ further."
+
+Error cases are implemented as described in the paper with small exceptions described at the end of this report.
 
 ### A practically large `MSS`?
 
