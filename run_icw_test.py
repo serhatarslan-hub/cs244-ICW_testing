@@ -32,6 +32,8 @@ def print_table_3(categories, icws):
     The values in icw[url] are guaranteed to be all the same at this point
     """
     icws = np.array([icws[url][0] for url in categories[0]])
+    print("Category 1 ICWs:")
+    print(icws)
     print("Table 3: ICW: Summary results")
     print("+------------+----------------+")
     print("| ICW size   | Servers        |")
