@@ -124,7 +124,7 @@ While Padhye & Floyd's TBIT tool error'ed out whenever the server responded with
 
 We measure ICW consistently with the unit definition of `cwnd`, in bytes. As long as the ICW is filled up, the total amount of payload sent will be equal to `cwnd`. If packet loss occurs along the way, the received payload size may be smaller than what is sent, but our implementation follows the sequence numbers of the received packets and terminates the test when a loss is detected. We also detect whether the response has finished before filling up the `cwnd` by catching any `FIN`, `RST` packets and/or retransmissions. In order to make sure `FIN` packets are sent at the end of responses, we use the `Connection: Close` attribute in our `GET` requests.
 
-A discussion on the meaning of a test with a small MSS vs more practical values is given [below](#discussion). We acknowledge the fact that our tests with limited number of MSS trials will not reveal the complete function that is used by the server to calculate its ICW.
+However, as we alluded to, it is reasonable to ask whether running such a test with an `MSS` of 64 or 100 can reasonably return meaningful results on the modern internet, when common `MSS` values are far from this. To begin to address this question, we perform a test with 5 different `MSS` values ranging from 64 to 1460 on a [known large file](http://yuba.stanford.edu/~nickm/img/nick-portrait.jpg). We discuss more practical MSS [below](#discussion). We acknowledge that our tests with limited number of MSS trials will not reveal the complete function that is used by the server to calculate its ICW.
 
 ### Finding large objects  
 
@@ -138,7 +138,7 @@ This almost always ensures either a `301 Moved Permanently` or a `404 Not Found`
 
 Although the large URL trick doesn't guarantee a large response, during our preliminary tests we realized that most of the websites had relatively small main page content. Our tool can be re-run to request the content of specific large objects.
 
-## Results  
+## Results
 
 The categorization results of the tests are shown below as the reproduction of table 2 in the original paper:  
 
@@ -157,11 +157,9 @@ The categorization results of the tests are shown below as the reproduction of t
 
 </center>  
 
-Unfortunately about two thirds our URL tests failed due to http timeouts, packet losses during transmission, and receiving FIN or RST packets before any retransmission. Especially receiving FIN or RST packets was the most common way of failing a test. The main reason for this issue is because we were sending a request for a non-existing page with a very long name, and some web-sites were not including the name of the page in their responses, so the responses would be shorter then the ICW size. Nevertheless, requesting for the main page would not ensure a long response anyway. (Most URLs use HTTPS, so requesting for the main page from port 80 returns 'Moved Permanently' error)  
+We have obtained about 3,500 successful results which help us to see the general distribution of ICW size throughout the Internet. The number of category 2 URLs is about 3,000, comparable with the number of category 1 URLs. Category 2 URLs denote that although we could get successful results from the URL, not all of the tests returned the same result. Packet loss or HTTP timeouts may cause this behavior. More investigation into those URLs is required.
 
-Satisfyingly, we have obtained more than 3500 successful results which would help us to see the general distribution of ICW size throughout the Internet. The distribution is presented in table 3 below. Please note that the number of category 2 URLs is about 3 thousand which is compatible with the number of category 1 URLs. Category 2 URLs denote that although we could get successful results from the URL, not all of the tests returned the same result. Packet loss or HTTP timeouts may cause this behavior. More investigation on those URLs could improve the number of category 1 URLs.
-
-Since category 1 servers are consistent with their results, we have also reproduced table 3 of the original paper from further analyzing this category. The original table shows ICW size values for 1 to 4 and adds a row for ICW values that are 5 or more. As we mentioned earlier, a table would not precisely show the ICW size distribution in the modern Internet as most of the servers have adopted larger ICW values. To see the ICW distribution relatively more clearly, we have added rows for ICW sizes of 8, 10, 16, and 32. (One could add more rows, but our results indicate that ICW values are concentrated more on 10 and 16 packets.) The collective results of our tests are presented below:  
+The distribution of ICW sizes as a multiple of `MSS` is presented in table 3 below. To see the ICW distribution more clearly, we have added rows for common ICW sizes of 8, 10, 16, and 32.
 
 <center> Table 3: ICW: Summary results </center>  
 
@@ -185,23 +183,43 @@ Since category 1 servers are consistent with their results, we have also reprodu
   
 </center>
 
-Our reproduction differs from the original paper significantly. Most web-servers used to choose an ICW size of 2 packets in 2001 experiments. However, as of 2019, the common trend for ICW size seems to be much larger. Namely ICW size of 10 or 16 MSS size packets are chosen as the most popular value. The choice of 10 MSS size packets is consistent with the proposed RFC from 2013. However it only makes approximately 30% percent of the tested URLs. **The popularity of ICW sizes such as 16 or 32 show that the liberal spirit of Internet motivates developers to deploy off-standard solutions to get tailored improvement for their applications.**   
+The minimum observed ICW value was 2, the max was 37. Both the median and average value was 16.
+
+### Experiments with a Larger `MSS`
+
+Below we present small-scale experiments for a single Stanford webserver.
+
+<center>
+
+| MSS size   | ICW Values   |
+|:----------:|:------------:|
+|         64 |            5 |
+|        128 |         4, 5 |
+|        512 |         4, 5 |
+|       1000 |         4, 5 |
+|       1460 |         3, 4 |  
+
+</center>
 
 ## Discussion  
 
-### Results of [Padhye & Floyd '01]  
+About two thirds our URL tests failed due to HTTP timeouts, packet losses during transmission, and receiving FIN or RST packets before any retransmission. Especially receiving FIN or RST packets was the most common way of failing a test. The main reason for this issue is because we were sending a request for a non-existing page with a very long name, and some web-sites did not include the name of the page in their responses, caising the responses to be shorter then the ICW size. We did not find that requesting URLs for the main page was a good workaround, so solving this issue likely requires using a scraper to identify large object on the webpages.
 
-When the experiments of [[Padhye & Floyd '01]](https://www.microsoft.com/en-us/research/wp-content/uploads/2017/01/tbit.pdf) were conducted, the current RFC would expect 4 MSS sized packets. However authors received mostly ICW of 2 MSS sized packets during their experiments. Normally this would be expected only when MSS is set to a large value greater than 2190 bytes. Interestingly, a realistic experiment with MSS of 1460 bytes would return an ICW of 3 packets according to the RFC 2414 (1992), but ICW of 3 was the least common value for their experiments. Those result could be interpreted as operating systems at the time manually setting their ICW for their own benefit or because of misconfiguration.  
+### Comparing to Results of [Padhye & Floyd '01]  
 
-### Results of Contemporary ICW Tests  
+Our reproduction reesults differs from the original paper significantly. Most web-servers used to choose an ICW size of 2 packets in 2001 experiments. However, as of 2019, common values for ICW sizes seem to be much larger. Namely ICW sizes of 10 and 16 appear most popular.
 
-The most recent RFC regarding the ICW size is the RFC 6928 (2013). It proposes to use an ICW of `10*MSS` bytes for MSS values that are less than or equal to 1460 bytes. (formula for calculation is shown in [Brief Description](#brief-description)) As a consequence, both realistic experiments (MSS=1460 bytes) and our small MSS tests were expected return 10 for ICW in terms of packets. Although the original paper uses MSS of 100 bytes, we concluded that MSS of 64 bytes would be safer for ICW filling. Our decision was confirmed when we compared the two sizes in our preliminary experiments as more URLs were categorized as Category 1.
+When the experiments of [[Padhye & Floyd '01]](https://www.microsoft.com/en-us/research/wp-content/uploads/2017/01/tbit.pdf) were conducted, the current RFC would expect 4 MSS sized packets. However, the authors observed mostly ICWs of 2 MSS sized packets. This would be expected only when MSS is set to a large value greater than 2190 bytes. Interestingly, a realistic experiment with MSS of 1460 bytes would return an ICW of 3 packets according to the RFC 2414 (1992), but an ICW of 3 was the least common value for their experiments. Those result could be interpreted as operating systems at the time manually setting their ICW for their own benefit or because of misconfiguration.
 
-Interestingly, our reproduced tables show that only about 30% of the URLs use ICW of 10 MSS sized packets. Rest of the URLs tend to use larger ICW as it would shorten the time-of-completion for large content transmissions. Other popular choices of ICW are 16, 34, and 64 MSS sized segments. This result is consistent with what [Padhye & Floyd '01] have discovered in the sense that most of the web servers even in today's Internet tend to not obey what is standardized by IETF, but rather use their choice of ICW which would improve their performance they provide to their users. Although such freedom can be practiced throughout the Internet, one should consider the fact that larger ICW sizes could only be useful when networks drop packets in a very rare fashion. This assumption may hold for today most of the time, but we can not argue it for the time the original paper was written (2001).  
+By contrast, we observe many ICW values much larger than suggested in the most recent RFC.
 
-On the other hand, our way of experimenting does not completely reveal the formula used by the web servers we tested. The complete formula given by the RFC 6928 (2013) is in the form of `min ( X*MSS, max (Y*MSS, 14600))` where `X=10` and `Y = 2 < X`. Since we are using MSS of 64 bytes, what we are measuring is the value of `X` assuming that the web server uses the same form of ICW formula. Even if our assumption is true, we still need to measure the value of `Y` to see the complete formula. Additionally, there could also be a different value instead of 14600 in the formula.  
+### Results of Contemporary ICW Tests
 
-In order to see the complete function of ICW, we could test the same URL with different MSS values ranging from 64 to at least 7300 bytes and calculate the transmitted size of data. This way we would know the exact function with the correct parameters that are used by the web server. However this would require a large data to be transmitted that fills the ICW independently from the MSS value. Finding such a file in every URL is not a feasible action to perform through the Internet due to Internet's size and variability of content. Instead, we helplessly assumed that most of the today's servers use an ICW formula of the form presented above with 14600 as the parameter. Then measuring `X` turns out to be enough for estimating the ICW size of realistic connections which would be bounded by `X` anyway due to the common practice of 1460 bytes of MSS.  
+The most recent RFC 6928 (2013) proposes to use an ICW of `10*MSS` bytes for MSS values that are less than or equal to 1460 bytes (see [formula above](#brief-description)). When we run our tests with an `MSS` of 64 or 100, thus, we should get an ICW of ≤ `10*MSS`. In fact, both realistic experiments (MSS=1460 bytes) and our small MSS tests were expected return 10 for ICW in terms of packets. In our test, only 32% of tests adhered to that standard. The rest of the URLs used larger ICW values, likely motivated by a desire to shorten the time-of-completion for large content transmissions. Our result is consistent with what [Padhye & Floyd '01] have discovered in the sense that most of the web servers even in today's Internet tend to not obey what is standardized by IETF, but rather use their choice of ICW which would improve their performance they provide to their users. However, the pendulum has swung into the other direction this time around. The popularity of ICW sizes such as 16 and 32 shows that the liberal spirit of Internet motivates developers to deploy off-standard solutions to get tailored improvement for their applications. Although such freedom can be practiced throughout the Internet, one should consider the fact that larger ICW sizes can only be useful when the networks drop packets in a very rare fashion. This assumption may hold today empirically.
+
+We caution that our experiment does not completely reveal the formula used by the web servers we tested. The complete formula given by the RFC 6928 (2013) is in the form of `min ( X*MSS, max (Y*MSS, 14600))` where `X=10` and `Y = 2 < X`. Since we are using MSS of 64 bytes, what we are measuring is the value of `X` assuming that the web server uses the same form of ICW formula. Even if our assumption is true, we still need to measure the value of `Y` to see the complete formula. Additionally, there could also be a different value instead of 14600 in the formula.  
+
+In order to see the complete function of ICW, we could test the same URL with different MSS values ranging from 64 to at least 7300 bytes and calculate the transmitted size of data. This would allow us to assess the exact function with the correct parameters that are used by the web server. However, this would require large data to be transmitted that fills the ICW independently from the MSS value. Finding a large file within every URL is not a feasible action to perform through the Internet due to Internet's size and variability of content. Instead, we helplessly assumed that most of the today's servers use an ICW formula of the form presented above with 14600 as the parameter. Then measuring `X` turns out to be enough for estimating the ICW size of realistic connections which would be bounded by `X` anyway due to the common practice of 1460 bytes of MSS.
 
 ## Complications and Limitations
 
@@ -230,3 +248,5 @@ where `%d` is our current evaluation port (unique for each URL and trial). After
 	    You may need to run `sudo ifdown eth1` and `sudo ifup eth1` after this or reboot the VM.
 
 - **Batched Execution.** Scapy's way of handling connections involves opening up a new file for every connection to write information about the incoming packets. However, in some versions and on some OS's, Scapy fails to close those files before the python process finishes and leaks file pointers. Since our tester opens many connections in one run, we encountered `[Errno 24] Too many open files` errors after some number of connections. This error prevented us to collect information for new connections. As a workaround, we provide a way to run the tests in batches. We have run the tests in 15 batches each with 1257 URLs to test. The batched execution steps are aggregated detailed in the `reproduce_results_batched.sh` script.
+
+- **Using a smaller MSS for higher fidelity.** Although the original paper uses MSS of 100 bytes, we concluded that MSS of 64 bytes would be safer for ICW filling. Our decision was confirmed when we compared the two sizes in our preliminary experiments as more URLs were categorized as Category 1.
