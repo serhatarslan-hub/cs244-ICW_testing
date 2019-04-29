@@ -52,13 +52,30 @@ Padhye & Floyd published their original ICW test in 2001 with an attempt to surv
 
 Padhye & Floyd's initial ICW test was presented with the release of the TCP Behavior Inference Tool (TBIT), which performs six different tests on publicly available web servers to understand their TCP behavior. The tests covered the ICW value, the choice of congestion control algorithm (CCA), conformant congestion control (CCC), implementation of selective acknowledgements (SACK), TCP timeout duration, and responses to ECN. In this report, we only attempt to reproduce the ICW results for popular web servers.
 
-The congestion window size is one of two metrics that determine how much data can be sent before any acknowledgement of arrival is received. Popular congestion control algorithms start from a relatively small value of congestion window size and slowly increase until congestion is perceived. The ICW determines how much data to be sent without any feedback on current congestion on the network. As a consequence, the choice of ICW is a trade-off between under-utilizing the available capacity and putting too much stress on the network. 
+The congestion window size is one of two metrics that determine how much data can be sent before any acknowledgement of arrival is received. Popular congestion control algorithms start from a relatively small value of congestion window size and slowly increase until congestion is perceived. The ICW determines how much data to be sent without any feedback on current congestion on the network. As a consequence, the choice of ICW is a trade-off between under-utilizing the available capacity and putting too much stress on the network.  
 
-In 2002, RFC 3390 "Increasing TCP's Initial Window" set a standard for determining ICW for implementors of TCP congestion control. The ICW was to be set as
+When the original paper was published, [RFC 2414](https://tools.ietf.org/html/rfc2414) was suggested by IETF to determine the ICW size. The RFC would exhibit the following rule for ICW calculation:  
+
+```  
+        If (MSS <= 1095 bytes)  
+            then win <= 4 * MSS;  
+        If (1095 bytes < MSS < 2190 bytes)  
+            then win <= 4380;  
+        If (2190 bytes <= MSS)  
+            then win <= 2 * MSS;
+```
+
+In 2002, [RFC 3390](https://tools.ietf.org/html/rfc3390) "Increasing TCP's Initial Window" set a standard for determining ICW for implementors of TCP congestion control. The ICW was to be set as
 
 ```
 min (4*MSS, max (2*MSS, 4380 bytes))
+```  
+
+In 2013, [RFC 6928](https://tools.ietf.org/html/rfc6928) proposed to increase ICW size even more and presented the following formula:  
+
 ```
+min (10*MSS, max (2*MSS, 14600)) 
+```  
 
 where `MSS` is the maximum segment size (in bytes) which set by the negotiation of the two end-hosts during the TCP handshake. (Both endpoints would send their choice of the `MSS` and the smaller one was to be choosen.) We discuss our evaluation of this function and its effect on the results of our ICW tests [below](#discussion).
 
@@ -164,13 +181,27 @@ Since category 1 servers are consistent with their results, we have also reprodu
 
 [ to do : Explain numbers ]  
 
-### Larger `MSS`
+### Larger `MSS`  
+
+Recall that we have given the ICW formula proposed by [RFC 3390](https://tools.ietf.org/html/rfc3390) in [Brief Description](#brief-description). If the given formula was used in the tested servers, we would get mostly ICW size of 4 with a small MSS such as 64 bytes. However, the results we present in the previous sections shows that most of the modern web servers use larger ICW size for small MSS values. In order to see an examplary behavior for a more realistic MSS size, we have tested www.stanford.com and www.youtube.com with 1460 bytes for MSS.
 
 [ to do ]
 
-## Discussion
+## Discussion  
 
-[ to do ]
+### Results of [Padhye, Floyd 01]  
+
+When the experiments of [[Padhye, Floyd 01]](https://www.microsoft.com/en-us/research/wp-content/uploads/2017/01/tbit.pdf) were conducted, the current RFC would expect 4 MSS sized packets. However authors received mostly ICW of 2 MSS sized packets during their experiments. Normally this would be expected only when MSS is set to a large value greater than 2190 bytes. Interestingly, a realistic experiment with MSS of 1460 bytes would return an ICW of 3 packets according to the RFC 2414 (1992), but ICW of 3 was the least common value for their experiments. Those result could be intrepreted as operating systems at the time manually setting their ICW for their own benefit or because of misconfiguration.  
+
+### Results of Contemporary ICW Tests  
+
+The most recent RFC regarding the ICW size is the RFC 6928 (2013). It proposes to use an ICW of `10*MSS` bytes for MSS values that are less than or equal to 1460 bytes. (formula for calculation is shown in [Brief Description](#brief-description)) As a consequence, both realistic experiments (MSS=1460 bytes) and our small MSS tests were expected return 10 for ICW in terms of packets. Although the original paper uses MSS of 100 bytes, we concluded that MSS of 64 bytes would be safer for ICW filling. Our decision was confirmed when we compared the two sizes in our preliminary experiments as more URLs were categorized as Category 1.
+
+Interestingly, our reproduced tables show that only about 30% of the URLs use ICW of 10 MSS sized packets. Rest of the URLs tend to use larger ICW as it would shorten the time-of-completion for large content transmissions. Other popular choices of ICW are 16, 34, and 64 MSS sized segments. This result is consistent with what [Padhye, Floyd 01] have discovered in the sense that most of the web servers even in today's Internet tend to not obey what is standardized by IETF, but rather use their choice of ICW which would improve their performance they provide to their users. Although such freedom can be practiced throughout the Internet, one should consider the fact that larger ICW sizes could only be useful when networks drop packets in a very rare fashion. This assumption may hold for today most of the time, but we can not argue it for the time the original paper was written (2001).  
+
+On the other hand, our way of experimenting does not completely reveal the formula used by the web servers we tested. The complete formula given by the RFC 6928 (2013) is in the form of `min ( X*MSS, max (Y*MSS, 14600))` where `X=10` and `Y = 2 < X`. Since we are using MSS of 64 bytes, what we are measuring is the value of `X` assuming that the web server uses the same form of ICW formula. Even if our assumption is true, we still need to measure the value of `Y` to see the complete formula. Additionally, there could also be a different value instead of 14600 in the formula.  
+
+In order to see the complete function of ICW, we could test the same URL with different MSS values ranging from 64 to at least 7300 bytes and calculate the transmitted size of data. This way we would know the exact fuction with the correct parameters that are used by the web server. However this would require a large data to be transmitted that fills the ICW independently from the MSS value. Finding such a file in every URL is not a feasible action to perform through the Internet due to Internet's size and variability of content. Instead, we helplessly assumed that most of the today's servers use an ICW formula of the form presented above with 14600 as the parameter. Then measuring `X` turns out to be enough for estimating the ICW size of realistic connections which would be bounded by `X` anyway due to the common practice of 1460 bytes of MSS.  
 
 ## Complications and Limitations
 
