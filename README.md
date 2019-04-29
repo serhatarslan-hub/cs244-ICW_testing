@@ -1,6 +1,6 @@
 # Measuring the Initial Congestion Window of Popular Webservers  
 
-*Authors: Serhat Arslan (sarslan@stanford.edu), Catalin Voss (catalin@cs.stanford.edu)*
+<center> *Serhat Arslan (sarslan@stanford.edu), Catalin Voss (catalin@cs.stanford.edu)* </center>
 
 In this repository, we attempt to reproduce measurements of the initial congestion window (ICW) size used by popular web servers. We aim to replicate the size measurements presented in the 2001 paper "On Inferring TCP Behavior" by Jitendra Padhye and Sally Floyd on the modern internet.
 
