@@ -128,7 +128,7 @@ Below we present our results for the Padhye & Floyd reproduction and our experim
  ```iptables -D OUTPUT -p tcp --sport %d --tcp-flags RST RST -j DROP```
 where `%d` is our current evaluation port (unique for each URL and trial). After each test, we revert the firewall rule and close the connection by manually sending RST packet with Scapy. Please note that the provided firewall rules are for Linux operating system. Using other operating systems for running our implementation may still encounter the given port blocking problem.  
 
-- **Default Hypervisor Configurations** During our initial experiments, we realized that our hypervisor (Oracle VM Virtualbox) changed the `MSS` option in the outgoing packets to 1460 bytes even when we manually set it to different values. This was mainly because of the default behavior of the hypervisor itself as reported in [this bug report](https://www.virtualbox.org/ticket/15256). Since this issue prevents obtaining the desired behavior from the web servers, the following steps may be helpful to overcome the problem:  
+- **Default Hypervisor Configurations.** During our initial experiments, we realized that our hypervisor (Oracle VM Virtualbox) changed the `MSS` option in the outgoing packets to 1460 bytes even when we manually set it to different values. This was mainly because of the default behavior of the hypervisor itself as reported in [this bug report](https://www.virtualbox.org/ticket/15256). Since this issue prevents obtaining the desired behavior from the web servers, the following steps may be helpful to overcome the problem:  
 
     1. Use the bridged networking option for Virtualbox. (Go to Machine > Settings > Network > Adapter 1 and set it to "Bridged")  
 
@@ -143,3 +143,5 @@ where `%d` is our current evaluation port (unique for each URL and trial). After
 	    ```  
 
 	    You may need to run `sudo ifdown eth1` and `sudo ifup eth1` after this or reboot the VM.
+
+- **Batched Execution.** [ to do ]
