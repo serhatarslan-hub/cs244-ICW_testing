@@ -124,39 +124,43 @@ Below we present our results for the Padhye & Floyd reproduction and our experim
 
 One of the main issues with reproducing the results of [[Padhye, Floyd 01]](https://www.microsoft.com/en-us/research/wp-content/uploads/2017/01/tbit.pdf) was testing the same URLs they tested two decades ago. On [TBIT website](https://www.icir.org/tbit/), we have found the URL list they have used. However, as one would expect, most the URLs on this list would return DNS errors, meaning they no long exist. In order to prevent this, we decided to use the list of most popular websites for USA provided by [Quantcast](https://www.quantcast.com/top-sites/). The list included couple of hundred thousand URLs, but we capped the list with 20 most popular websites to make sure our tests return in feasible amount of time. Every URL is tested 5 times, adding up to 100 thousand tests. The categorization results of the tests are shown below as the reproduction of table 2 in the original paper:  
 
-Table 2: ICW: Server categories
-+-----------+----------------+
-| Category  | Servers        |
-+-----------+----------------+
-|         1 |           2776 |
-|         2 |           2042 |
-|         3 |             68 |
-|         4 |              8 |
-|         5 |           8932 |
-+-----------+----------------+
-|     Total |          13826 |
-+-----------+----------------+  
+<center> Table 2: ICW: Server categories </center>  
+
+<center>  
+	
+| Category  | Servers |
+|:---------:|:-------:|
+|         1 |    2776 |
+|         2 |    2042 |
+|         3 |      68 |
+|         4 |       8 |
+|         5 |    8932 |
+|     Total |   13826 |  
+
+</center>  
 
 [ to do : Explain numbers ]  
 
 Since category 1 servers are consistent with their results, we have also reproduced table 3 of the original paper from further analysing this category. The original table shows ICW size values for 1 to 4 and adds a row for ICW values that are 5 or more. As we mentioned earlier, a table would now precisely show the ICW size distribution in the modern Internet as most of the servers have adopted larger ICW values. To see the ICW distribution relatively more clearly, we have added rows for ICW sizes of 8, 10, 16, and 32. (One could add more rows, but our results indicate that ICW values are concentrated more on 10 and 16 packets.) The collective results of our tests are presented below:  
 
-Table 3: ICW: Summary results
-+------------+----------------+
-| ICW size   | Servers        |
-+------------+----------------+
-|          1 |              0 |
-|          2 |              2 |
-|          3 |              5 |
-|          4 |              4 |
-|  5 or more |           2765 |
-|          8 |             11 |
-|         10 |            845 |
-|         16 |            841 |
-|         32 |              4 |
-+------------+----------------+
-|      Total |           2776 |
-+------------+----------------+  
+<center> Table 3: ICW: Summary results </center>  
+
+<center>
+
+| ICW size   | Servers   |
+|:----------:|:---------:|
+|          1 |         0 |
+|          2 |         2 |
+|          3 |         5 |
+|          4 |         4 |
+|  5 or more |      2765 |  
+|      Total |      2776 |
+|          8 |        11 |
+|         10 |       845 |
+|         16 |       841 |
+|         32 |         4 |
+  
+</center>
 
 [ to do : Explain numbers ]  
 
