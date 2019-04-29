@@ -88,15 +88,31 @@ Although we did not directly use TBIT, the testing methodology of our implementa
 
 While Padhye & Floyd's TBIT tool errored out whenever the server responded with a `MSS` bigger than advertised, we found this impractical for an `MSS` of 100 bytes as layed out in the paper. Many modern web servers will ignore requests for such a small `MSS` and when our tool is run in a commercial cloud environment such as Google Cloud, we found that networking infrastructure as well as virtualization platforms along the way often enforce a larger `MSS`. We thus don't penalize a server for returning data packets greater than our requested size and simply compute ICW as `total_payload_size / MSS`.  
 
-Our way of measuring ICW is consistent with the unit definition of `cwnd` which is bytes. As long as the ICW is filled up, the total amount of payload sent will be equal to `cwnd`. If there is a packet loss on the way, the received payload size may be smaller than what is sent, but our implementation follows the sequence numbers of the received packets and terminates the test when a loss is detected. We also detect whether the response has finished before filling up the `cwnd` by catching any `FIN`, `RST` packets and/or retransmissions. In order to make sure `FIN` packets are sent at the end of responses, we use the `Connection: Close` attribute in our `GET` requests.  
+We measure ICW consistently with the unit definition of `cwnd`, in bytes. As long as the ICW is filled up, the total amount of payload sent will be equal to `cwnd`. If packet loss occurs along the way, the received payload size may be smaller than what is sent, but our implementation follows the sequence numbers of the received packets and terminates the test when a loss is detected. We also detect whether the response has finished before filling up the `cwnd` by catching any `FIN`, `RST` packets and/or retransmissions. In order to make sure `FIN` packets are sent at the end of responses, we use the `Connection: Close` attribute in our `GET` requests.
+
+However, as we alluded to, it is reasonable to ask whether running such a test with an `MSS` of 64 or 100 can reasonably return meaningful results on the modern internet, when common `MSS` values are far from this. To address this question, we perform our test on two websites with known large objects (`stanford.edu` and `youtube.com`) and report `ICW` results for different `MSS` sizes.
 
 ### Finding large objects  
 
-Padhye & Floyd request the main pages of the URLs during their ICW tests. Then they state the risk of not maxing out the ICW with the content of the main page. As a solution to this risk, we follow a method similar to that of Rüth et al. 2017 for ensuring that the response to our GET request maxes out `MSS*ICW` bytes. We simply make up a fairly large (more than 1460 bytes itself) request URL, i.e. `www.stanford.edu/AAAAAaaaaaBBBBBbbbbb...`. This almost always ensures either a `301 Moved Permanently` or a `404 Not Found` error. In both cases, the response typically contains the initial URL (and more), pushing us past the required window.  
+Padhye & Floyd request the main pages of the URLs during their ICW tests. Then they state the risk of not maxing out the ICW with the content of the main page. As a solution to this risk, we follow a method similar to that of Rüth et al. 2017 for ensuring that the response to our GET request maxes out `MSS*ICW` bytes. We simply make up a fairly large request URL, i.e.
 
-Although the large URL trick doesn't ensure a large response, during our preliminary tests we realized that most of the websites had relatively small main page content. As a result, large URL trick would return relatively more tests with successful ICW estimation. Nevertheless, one can re-run the tests with proper arguments as provided in the reproduction instructions to request for the main page of the URL.   
+```
+www.stanford.edu/AAAAAaaaaaBBBBBbbbbb...
+```
+
+This almost always ensures either a `301 Moved Permanently` or a `404 Not Found` error. In both cases, the response typically contains the initial URL (and more), pushing us past the required window.  
+
+Although the large URL trick doesn't guarantee a large response, during our preliminary tests we realized that most of the websites had relatively small main page content. Our tool can be re-run to request the content of specific large objects.
 
 ## Results
+
+Below we present our results for the Padhye & Floyd reproduction and our experiments with a larger `MSS`.
+
+### Padhye & Floyd Reproduction
+
+[ to do ]
+
+### Larger `MSS`
 
 [ to do ]
 
@@ -112,18 +128,18 @@ Although the large URL trick doesn't ensure a large response, during our prelimi
  ```iptables -D OUTPUT -p tcp --sport %d --tcp-flags RST RST -j DROP```
 where `%d` is our current evaluation port (unique for each URL and trial). After each test, we revert the firewall rule and close the connection by manually sending RST packet with Scapy. Please note that the provided firewall rules are for Linux operating system. Using other operating systems for running our implementation may still encounter the given port blocking problem.  
 
-- **Default Hypervisor Configurations** During our experiments, we have realized that our hypervisor (Oracle VM Virtualbox) changed the `MSS` option in the outgoing packets to 1460 bytes even when we manually set it to different values. This was mainly because of the default behavior of the hypervisor itself as reported in https://www.virtualbox.org/ticket/15256 bug report. Since this issue would prevent obtaining the desired behavior from the web servers, the following steps may be helpful to overcome the problem (if encountered):  
+- **Default Hypervisor Configurations** During our initial experiments, we realized that our hypervisor (Oracle VM Virtualbox) changed the `MSS` option in the outgoing packets to 1460 bytes even when we manually set it to different values. This was mainly because of the default behavior of the hypervisor itself as reported in [this bug report](https://www.virtualbox.org/ticket/15256). Since this issue prevents obtaining the desired behavior from the web servers, the following steps may be helpful to overcome the problem:  
 
     1. Use the bridged networking option for Virtualbox. (Go to Machine > Settings > Network > Adapter 1 and set it to "Bridged")  
 
     2. Set DHCP for the connected interface statically and steal the IP information of the host interface to connect the VM interface to the Internet. Namely, edit /etc/network/interfaces on the VM.  
 
-    ```
-    iface eth1 inet static  
-    	address [host ip]  
-            gateway [host gateway]  
-            broadcast [host broadcast]  
-            dns-nameservers 8.8.8.8
-    ```  
+	    ```
+	    iface eth1 inet static  
+	    	address [host ip]  
+	            gateway [host gateway]  
+	            broadcast [host broadcast]  
+	            dns-nameservers 8.8.8.8
+	    ```  
 
-    You may need to run `sudo ifdown eth1` and `sudo ifup eth1` after this or reboot the VM.
+	    You may need to run `sudo ifdown eth1` and `sudo ifup eth1` after this or reboot the VM.
