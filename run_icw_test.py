@@ -21,7 +21,7 @@ def print_table_2(categories):
     print("+-----------+----------------+")
     for i, c in enumerate(categories):
         print(("|         %d |" % (i+1))+"{0: >15}".format(len(c))+ " |")
-    print("+------------+----------------+")
+    print("+------------+---------------+")
     print("|     Total |"+"{0: >15}".format(sum([len(c) for c in categories]))+ " |")
     print("+-----------+----------------+")
 
