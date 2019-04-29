@@ -37,7 +37,7 @@ To perform the tests in a more realistic environment, set the `--mss` value to 1
 Our tests request for a non-existing very long page from every URL. This is implemented to make sure response content is long enough to fill the ICW as suggested by [[Rüth et al. '17]](https://conferences.sigcomm.org/imc/2017/papers/imc17-final43.pdf). To request for the main page of the URL, simply pass `--main_page` argument while running the tester, e.g.
 
 ```
-sudo python run_icw_test.py --mss 100 --url_list urls/QuantasPopularURLs.txt --main_page
+sudo python run_icw_test.py --mss 64 --url_list urls/QuantasPopularURLs.txt --main_page
 ```  
 
 For more options, see:
@@ -48,9 +48,9 @@ python run_icw_test.py --help
 
 ## Brief Description  
 
-Padhye & Floyd published their original ICW test in 2001 with in an attempt to survey the general behavior of TCP implementations of the internet at the time. Historically, TCP implementations differed widely, so it remains as important today as it was in 2001 to get a picture on the diversity of parameters used on the internet to ensure fairness and stability. Understanding the big picture of the internet can then help in determining standards, simulations, and new applications.
+Padhye & Floyd published their original ICW test in 2001 with an attempt to survey the general behavior of TCP implementations of the Internet at the time. Historically, TCP implementations differed widely, so it remains as important today as it was in 2001 to get a picture on the diversity of parameters used on the Internet to ensure fairness and stability. Understanding the big picture of the Internet can then help in determining standards, simulations, and new applications.
 
-Padhye & Floyd's initial ICW was presented with the release of the TCP Behavior Inference Tool (TBIT), which performs six different tests on publicly available web servers to understand their TCP behavior. The tests covered the ICW value, the choice of congestion control algorithm (CCA), conformant congestion control (CCC), implementation of selective acknowledgements (SACK), TCP timeout duration, and responses to ECN. In this report, we only attempt to reproduce the ICW results of popular web servers.
+Padhye & Floyd's initial ICW test was presented with the release of the TCP Behavior Inference Tool (TBIT), which performs six different tests on publicly available web servers to understand their TCP behavior. The tests covered the ICW value, the choice of congestion control algorithm (CCA), conformant congestion control (CCC), implementation of selective acknowledgements (SACK), TCP timeout duration, and responses to ECN. In this report, we only attempt to reproduce the ICW results for popular web servers.
 
 The congestion window size is one of two metrics that determine how much data can be sent before any acknowledgement of arrival is received. Popular congestion control algorithms start from a relatively small value of congestion window size and slowly increase until congestion is perceived. The ICW determines how much data to be sent without any feedback on current congestion on the network. As a consequence, the choice of ICW is a trade-off between under-utilizing the available capacity and putting too much stress on the network. 
 
@@ -69,44 +69,32 @@ The ICW test proposed by Padhye & Floyd proceeds as follows:
 - The tester performs a simple TCP handshake with the end host and specifies a small `MSS` value.
 - The tester sends a packet with an HTTP GET request.
 - Following the request, the tester sends no additional acknowledgements for arriving packets. This results in a timeout on the web server after `ICW * MSS` amount of data has been sent.
-- Once a timeout is detected by the server but after filling the initial congestion window, it will begin retransmits the previosly sent packets.
+- Once a timeout is detected by the server but after filling the initial congestion window, it will begin retransmiting the previosly sent packets.
 - The tester then interprets this retransmission as the conclusion of the ICW and infers the ICW size as the total number of bytes received up to this point divided by the `MSS`.
 
-In order to infer the ICW size, we need to ensure that the web server will send at least `ICW * MSS` amount of data. Finding a large file on every web server is difficult so Padhye & Floyd attempt to solve this problem by keeping the `MSS` small (the paper uses a value of 100 bytes). This is problematic because the most common MSS size on today's internet is 1460 bytes. We discuss this consideration below.
+In order to infer the ICW size, we need to ensure that the web server will send at least `ICW * MSS` amount of data. Finding a large file on every web server is difficult so Padhye & Floyd attempt to solve this problem by keeping the `MSS` small (the paper uses a value of 100 bytes). This is problematic because the most common MSS size on today's internet is 1460 bytes. We discuss this consideration [below](#discussion).
 
 ## Reproduction Philosophy
 
 Our code aims to reproduce only the initial congestion window size measurements of Padhye & Floyd by reproducing Tables 2 and 3 in the original paper. To make our results comparable, we aimed to base our reproduction as closely as possible on the written description in Padhye & Floyd. However, some small modifications were necessary to make this reproduction possible. We then address issues with this reproduction on the modern internet, specifically the issue of an artificially small `MSS` and describe experiments for reproducing the test with a larger `MSS` on the modern internet.
 
-We did not use TBIT (the tool that authors used for their tests) during our reproduction due to compatibility issues. TBIT was implemented for the BSD operating system 19 years ago (source code available at www.aciri.org/tbit/). Although a patch for Linux competibility was published in 2004, there remain several compatibility issues with modern Linux distributions. We implemented our own initial congestion window size tester in Python 2.7 using the Scapy packet manipulation module. We chose Scapy for its simplicity and flexibility for packet by packet content manipulation. We discuss complications with this choice below.
+We did not use TBIT (the tool that authors used for their tests) during our reproduction due to compatibility issues. TBIT was implemented for the BSD operating system 19 years ago (source code available at www.aciri.org/tbit/). Although a patch for Linux competibility was published in 2004, there remain several compatibility issues with modern Linux distributions. We implemented our own initial congestion window size tester in Python 2.7 using the Scapy packet manipulation module. We chose Scapy for its simplicity and flexibility for packet by packet content manipulation. We discuss complications with this choice [below](#Complications-and-Limitations).
 
 During our preliminary tests, we realized that relatively large group of the web servers have adopted an ICW size of >> 5 `MSS` sized packets. In 2001, this was a rare occurence, so Padhye & Floyd only list sizes up to 5. We extended the table 3 presented on the paper and with commonly encountered ICW configurations.
 
 Although we did not directly use TBIT, the testing methodology of our implementation follows the descriptions given in the Padhye & Floyd paper step by step. The categorization of web servers follows that of the paper exactly:
 
-1. "If at least three tests return results, and all the results are
-the same, the server is added to category 1. We have the
-highest confidence in these results, as they have been shown
-to be repeatable. We report summary results only for servers
-belonging to this category."
-2. "If at least three tests return results, but not all the results are
- the same, the server is added to category 2. The differing results
- could be due to several factors, such as confusing packet
- drop patterns (as discussed in Section 2), which are further
- discussed in Section 5. We would like to minimize the number of
- servers that fall in this category."
-3. "If one or two tests return results, and all the results are the
- same, the server is added to category 3. Further tests are
- needed to categorize the TCP behavior of this server."
-4. "If one or two tests return results, and not all the results are
- the same, the server is added to category 4. We would like to
- minimize the number of servers that fall in this category as
- well."
-5. "If none of the five tests returned a result, this server was
- added to category 5. These servers need to be investigated
- further."
+1. "If at least three tests return results, and all the results are the same, the server is added to category 1. We have the highest confidence in these results, as they have been shown to be repeatable. We report summary results only for servers belonging to this category."  
 
-Error cases are implemented as described in the paper with small exceptions described at the end of this report.
+2. "If at least three tests return results, but not all the results are the same, the server is added to category 2. The differing results could be due to several factors, such as confusing packet drop patterns (as discussed in Section 2), which are further discussed in Section 5. We would like to minimize the number of servers that fall in this category."  
+
+3. "If one or two tests return results, and all the results are the same, the server is added to category 3. Further tests are needed to categorize the TCP behavior of this server."  
+
+4. "If one or two tests return results, and not all the results are the same, the server is added to category 4. We would like to minimize the number of servers that fall in this category as well."  
+
+5. "If none of the five tests returned a result, this server was added to category 5. These servers need to be investigated further."  
+
+Error cases are implemented as described in the paper with small exceptions described the following sub-sections.
 
 ### A practically large `MSS`?
 
@@ -118,7 +106,7 @@ However, as we alluded to, it is reasonable to ask whether running such a test w
 
 ### Finding large objects  
 
-Padhye & Floyd request the main pages of the URLs during their ICW tests. Then they state the risk of not maxing out the ICW with the content of the main page. As a solution to this risk, we follow a method similar to that of Rüth et al. 2017 for ensuring that the response to our GET request maxes out `MSS*ICW` bytes. We simply make up a fairly large request URL, i.e.
+Padhye & Floyd request the main pages of the URLs during their ICW tests. Then they state the risk of not maxing out the ICW with the content of the main page. As a solution to this risk, we follow a method similar to that of [[Rüth, Bormann, Hohlfeld 17]](https://conferences.sigcomm.org/imc/2017/papers/imc17-final43.pdf) for ensuring that the response to our GET request maxes out `MSS*ICW` bytes. We simply make up a fairly large request URL, i.e.
 
 ```
 www.stanford.edu/AAAAAaaaaaBBBBBbbbbb...
@@ -134,7 +122,43 @@ Below we present our results for the Padhye & Floyd reproduction and our experim
 
 ### Padhye & Floyd Reproduction
 
-[ to do ]
+One of the main issues with reproducing the results of [[Padhye, Floyd 01]](https://www.microsoft.com/en-us/research/wp-content/uploads/2017/01/tbit.pdf) was testing the same URLs they tested two decades ago. On [TBIT website](https://www.icir.org/tbit/), we have found the URL list they have used. However, as one would expect, most the URLs on this list would return DNS errors, meaning they no long exist. In order to prevent this, we decided to use the list of most popular websites for USA provided by [Quantcast](https://www.quantcast.com/top-sites/). The list included couple of hundred thousand URLs, but we capped the list with 20 most popular websites to make sure our tests return in feasible amount of time. Every URL is tested 5 times, adding up to 100 thousand tests. The categorization results of the tests are shown below as the reproduction of table 2 in the original paper:  
+
+Table 2: ICW: Server categories
++-----------+----------------+
+| Category  | Servers        |
++-----------+----------------+
+|         1 |           2776 |
+|         2 |           2042 |
+|         3 |             68 |
+|         4 |              8 |
+|         5 |           8932 |
++-----------+----------------+
+|     Total |          13826 |
++-----------+----------------+  
+
+[ to do : Explain numbers ]  
+
+Since category 1 servers are consistent with their results, we have also reproduced table 3 of the original paper from further analysing this category. The original table shows ICW size values for 1 to 4 and adds a row for ICW values that are 5 or more. As we mentioned earlier, a table would now precisely show the ICW size distribution in the modern Internet as most of the servers have adopted larger ICW values. To see the ICW distribution relatively more clearly, we have added rows for ICW sizes of 8, 10, 16, and 32. (One could add more rows, but our results indicate that ICW values are concentrated more on 10 and 16 packets.) The collective results of our tests are presented below:  
+
+Table 3: ICW: Summary results
++------------+----------------+
+| ICW size   | Servers        |
++------------+----------------+
+|          1 |              0 |
+|          2 |              2 |
+|          3 |              5 |
+|          4 |              4 |
+|  5 or more |           2765 |
+|          8 |             11 |
+|         10 |            845 |
+|         16 |            841 |
+|         32 |              4 |
++------------+----------------+
+|      Total |           2776 |
++------------+----------------+  
+
+[ to do : Explain numbers ]  
 
 ### Larger `MSS`
 
@@ -168,4 +192,4 @@ where `%d` is our current evaluation port (unique for each URL and trial). After
 
 	    You may need to run `sudo ifdown eth1` and `sudo ifup eth1` after this or reboot the VM.
 
-- **Batched Execution.** [ to do ]
+- **Batched Execution.** Scapy's way of handling connections involves opening up a new file for every connection to write information about the incoming packets. However, Scapy fails to close those files before the python process finishes. Since our tester opens many connections in one run, we encountered `[Errno 24] Too many open files` errors after some number of connections. This error prevented us to collect information for new connections. As a solution, we have decided to run the tests with batched, so that less amount of connections would be established in each python process. We have run the tests in 15 batches each having 1257 URLs to test. The batched execution steps are aggregated in `reproduce_results_batched.sh` script. (Please note that the batched results shall be summed up manually to get the aggregate result.)
