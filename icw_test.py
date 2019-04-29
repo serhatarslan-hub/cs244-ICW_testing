@@ -180,10 +180,12 @@ class ICWTest(object):
             segment_size -= len(pad)
         
 
-        if packet.seq < self.prev_seqno:
+        if packet.seq <= self.prev_seqno and packet.seq != self.cur_seqno:
             return True
 
         elif packet.seq != self.cur_seqno and self.cur_seqno is not 0:
+            print("Received out of order packet! %d, expected %d"
+                  % (packet.seq, self.cur_seqno))
             raise ICWTestException(Result.PACKET_LOSS)
             return True
 
